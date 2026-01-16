@@ -1,0 +1,92 @@
+schema: '2.0'
+stages:
+  data_ingestion:
+    cmd: python Backend/src/DataPreparation/dataIgnestion.py
+    deps:
+    - path: Backend/src/DataPreparation/dataIgnestion.py
+      hash: md5
+      md5: a5f5dba8ffe6b49a7b893d7342e9904d
+      size: 2899
+    params:
+      params.yaml:
+        data_ingestion.test_size: 0.2
+    outs:
+    - path: data/raw_csv
+      hash: md5
+      md5: 427d04a0eabb182414325f25d7e133bd.dir
+      size: 102108
+      nfiles: 1
+  data_preprocessing:
+    cmd: python  Backend/src/DataPreparation/dataPreprocess.py
+    deps:
+    - path: Backend/src/DataPreparation/dataPreprocess.py
+      hash: md5
+      md5: f50e122d1a863da49cbdfe07b35d197c
+      size: 4636
+    outs:
+    - path: data/interim
+      hash: md5
+      md5: dfc1c4e378ec19643ce5117e0e49e135.dir
+      size: 72733
+      nfiles: 2
+  model_building:
+    cmd: python Backend/src/Model/modelBuilding.py
+    deps:
+    - path: Backend/src/Model/modelBuilding.py
+      hash: md5
+      md5: 3840a5cce6cb6da82399323648691056
+      size: 5614
+    - path: data/interim/train_processed.csv
+      hash: md5
+      md5: 3ef6121a374badff7c69b46f7862f864
+      size: 58080
+    params:
+      params.yaml:
+        model_building.colsample_bytree: 0.7673171097494762
+        model_building.learning_rate: 0.0182847361490907
+        model_building.max_depth: 3
+        model_building.min_child_weight: 8
+        model_building.n_estimators: 507
+        model_building.reg_alpha: 0.673025467709264
+        model_building.reg_lambda: 1.7078270894285374
+        model_building.subsample: 0.8897673176355907
+    outs:
+    - path: models/xgboost_medical_model.pkl
+      hash: md5
+      md5: 8b661f9c1ceb72f10c3e729bbe72db42
+      size: 3850518
+  model_evaluation:
+    cmd: python Backend/src/Model/modelEvaluation.py
+    deps:
+    - path: Backend/src/Model/modelEvaluation.py
+      hash: md5
+      md5: d5af7a58a5a1eadba07b1a173a24bc80
+      size: 5048
+    - path: data/interim/test_processed.csv
+      hash: md5
+      md5: 13ac9ff5b791d4c8b6a640fbf29fd05a
+      size: 14653
+    - path: data/interim/train_processed.csv
+      hash: md5
+      md5: 3ef6121a374badff7c69b46f7862f864
+      size: 58080
+    - path: models/xgboost_medical_model.pkl
+      hash: md5
+      md5: 8b661f9c1ceb72f10c3e729bbe72db42
+      size: 3850518
+    outs:
+    - path: experiment_info.json
+      hash: md5
+      md5: af3f4173b21f3b13d38fcfb631b75522
+      size: 90
+  model_registration:
+    cmd: python Backend/src/Model/modelRegister.py
+    deps:
+    - path: Backend/src/Model/modelRegister.py
+      hash: md5
+      md5: 03da87e7db4fb7add4dc68c90fc0f47a
+      size: 2653
+    - path: experiment_info.json
+      hash: md5
+      md5: af3f4173b21f3b13d38fcfb631b75522
+      size: 90

@@ -1,0 +1,4 @@
+2026-01-15 20:52:28,751 - dataPreprocess - ERROR - File not Found: B:\PersonalDietPlan-Infosys\DietPlanner\Backend\src\DataPreparation\../../params.yaml
+2026-01-15 20:52:28,751 - dataPreprocess - ERROR - Failed to complete the data preprocessing process: [Errno 2] No such file or directory: 'B:\\PersonalDietPlan-Infosys\\DietPlanner\\Backend\\src\\DataPreparation\\../../params.yaml'
+2026-01-15 20:54:19,165 - dataPreprocess - ERROR - Failed to complete the data preprocessing process: [Errno 2] No such file or directory: 'B:\\PersonalDietPlan-Infosys\\DietPlanner\\data\\raw_csv\\Medical-Report-Data-FINAL.csv'
+2026-01-15 20:56:21,834 - dataPreprocess - ERROR - Failed to complete the data preprocessing process: assign_single_label() missing 1 required positional argument: 'row'
