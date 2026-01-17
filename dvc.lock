@@ -90,3 +90,23 @@ stages:
       hash: md5
       md5: af3f4173b21f3b13d38fcfb631b75522
       size: 90
+  vector_ignestion:
+    cmd: python Backend/src/DietPlan-RAG/vectorIgniest.py
+    deps:
+    - path: Backend/src/DietPlan-RAG/fileProcessing.py
+      hash: md5
+      md5: 01d7c433a9a7b2123f816184e45edfc1
+      size: 2192
+    - path: Backend/src/DietPlan-RAG/vectorIgniest.py
+      hash: md5
+      md5: 7e709895b79518b3c7a99b0f8a85596f
+      size: 3765
+    - path: DeitPDFS/medical_diet_guidelines.pdf
+      hash: md5
+      md5: 07bbb23a084add8949b5ae3d751c8b31
+      size: 48758872
+    outs:
+    - path: dvc_artifacts/vector_ingestion.done
+      hash: md5
+      md5: 8685b983c2fb7fc9dd03abe59b1f1fee
+      size: 42
