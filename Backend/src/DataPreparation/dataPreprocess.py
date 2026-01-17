@@ -88,28 +88,62 @@ def assign_single_label(row):
 
     return 0
 
-def Preprocess_data(df: pd.DataFrame, assign_single_label):
+# from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
+# import pandas as pd
 
-    df = df.drop(columns=["Blood Group", "Unnamed: 0", "Name"], errors="ignore")
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 
-    df['label'] = df.apply(assign_single_label, axis=1)
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
+import numpy as np
+import pandas as pd
 
-    ordinal = OrdinalEncoder(categories=[["Low","Moderate","High"]])
-    df['Activity'] = ordinal.fit_transform(df[['Activity']])
+def Preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
 
-    label_enc = LabelEncoder()
-    df['Gender'] = label_enc.fit_transform(df['Gender'])
-    df['Diabetes'] = label_enc.fit_transform(df['Diabetes'])
-    df['Smoker'] = label_enc.fit_transform(df['Smoker'])
+    df = df.drop(columns=["Blood Group", "Name"], errors="ignore")
 
-    anemia_encoder = OrdinalEncoder(categories=[["Normal","Mild","Moderate","Severe"]])
-    df['Anemia'] = anemia_encoder.fit_transform(df[['Anemia']])
+
+    if 'Activity' in df.columns:
+     
+        if df['Activity'].notna().any():
+            ordinal = OrdinalEncoder(
+                categories=[["Low", "Moderate", "High"]],
+                handle_unknown="use_encoded_value",
+                unknown_value=np.nan
+            )
+            df.loc[df['Activity'].notna(), 'Activity'] = ordinal.fit_transform(
+                df.loc[df['Activity'].notna(), ['Activity']]
+            )
+        else:
+         
+            df['Activity'] = np.nan
+
+
+    if 'Anemia' in df.columns:
+        if df['Anemia'].notna().any():
+            anemia_encoder = OrdinalEncoder(
+                categories=[["Normal", "Mild", "Moderate", "Severe"]],
+                handle_unknown="use_encoded_value",
+                unknown_value=np.nan
+            )
+            df.loc[df['Anemia'].notna(), 'Anemia'] = anemia_encoder.fit_transform(
+                df.loc[df['Anemia'].notna(), ['Anemia']]
+            )
+        else:
+            df['Anemia'] = np.nan
+
+   
+    for col in ['Gender', 'Diabetes', 'Smoker']:
+        if col in df.columns:
+            if df[col].notna().any():
+                le = LabelEncoder()
+                df.loc[df[col].notna(), col] = le.fit_transform(
+                    df.loc[df[col].notna(), col]
+                )
+            else:
+                df[col] = np.nan
 
     return df
-
-
-
-
 
 def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame, data_path: str) -> None:
 

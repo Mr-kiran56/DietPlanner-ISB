@@ -39,24 +39,40 @@ def load_data(data_url: str)->pd.DataFrame:
         raise
 
 
-def preprocess_data(df: pd.DataFrame)-> pd.DataFrame:
+
+def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     try:
+        df = df.copy()  # avoid chained assignment issues
+
+        # ---------- Drop junk column ----------
         if 'Unnamed: 0' in df.columns:
-            df.drop(columns='Unnamed: 0',inplace=True)
+            df = df.drop(columns='Unnamed: 0')
 
-        df.loc[df['Age'] > 150, 'Age'] = df.loc[df['Age'] > 100, 'Age'] // 10
-        df['Age'] = df['Age'].astype(int)
+        # ---------- AGE ----------
+        if 'Age' in df.columns:
+            df.loc[df['Age'] > 150, 'Age'] = df.loc[df['Age'] > 150, 'Age'] // 10
+            df['Age'] = df['Age'].astype('Int64')  # allows NaN
 
-        df.loc[df['BMI'] > 46, 'BMI'] = df.loc[df['BMI'] > 46, 'BMI'] // 10
-        df['BMI'] = df['BMI'].astype(float)
+        # ---------- BMI ----------
+        if 'BMI' in df.columns:
+            df.loc[df['BMI'] > 46, 'BMI'] = df.loc[df['BMI'] > 46, 'BMI'] // 10
+            df['BMI'] = df['BMI'].astype(float)
 
-        df.loc[df['Systolic BP']<20,'Systolic BP']=df.loc[df['Systolic BP']<20,'Systolic BP']*10
+        # ---------- SYSTOLIC BP ----------
+        if 'Systolic BP' in df.columns:
+            df.loc[df['Systolic BP'] < 20, 'Systolic BP'] = (
+                df.loc[df['Systolic BP'] < 20, 'Systolic BP'] * 10
+            )
 
-        df['Anemia'].replace('Dietary iron','Mild',inplace=True)
-
-        df['Anemia'].replace('Iron therapy needed','Moderate',inplace=True)
+        # ---------- ANEMIA TEXT FIX ----------
+        if 'Anemia' in df.columns:
+            df['Anemia'] = df['Anemia'].replace({
+                'Dietary iron': 'Mild',
+                'Iron therapy needed': 'Moderate'
+            })
 
         return df
+
     
     except KeyError as e:
 

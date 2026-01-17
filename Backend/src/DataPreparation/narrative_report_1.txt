@@ -1,0 +1,26 @@
+HEALTH DIAGNOSTICS CENTER
+PATIENT MEDICAL REPORT #2
+Date: 14/12/2025
+
+PATIENT: Sean Fisher
+Age: 33 years | Gender: Male | Blood Group: B-
+
+CLINICAL ASSESSMENT:
+This 33-year-old male patient presents with:
+
+HEMATOLOGY:
+• Hemoglobin: 12.6 g/dL - NORMAL
+• Anemia Status: Normal
+
+METABOLIC:
+• PPBS: 70 mg/dL - NORMAL
+• BMI: 26.4 - OVERWEIGHT
+
+
+CARDIOVASCULAR:
+
+• Cholesterol: 177 mg/dL
+
+
+
+Dr. A. Sharma, MD
