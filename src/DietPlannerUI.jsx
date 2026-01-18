@@ -75,8 +75,12 @@ const DietPlanner = () => {
     setError(null);
 
     try {
+      // Build query parameters with user preferences
       const params = new URLSearchParams({
         file_path: uploadedFilePath,
+        food_type: preferences.foodType,
+        budget: preferences.budget,
+        days: preferences.days.toString()
       });
 
       const response = await fetch(`${API_BASE_URL}/ML/Predict?${params}`, {

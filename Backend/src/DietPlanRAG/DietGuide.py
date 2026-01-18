@@ -64,6 +64,10 @@ app.add_middleware(
 # ---------- PYDANTIC MODELS ----------
 class PredictionRequest(BaseModel):
     file_path: str
+    food_type: Optional[str] = "veg"
+    budget: Optional[str] = "medium"
+    days: Optional[int] = 7
+    
 
 class MLPrediction(BaseModel):
     predicted_disease: str
@@ -158,22 +162,53 @@ async def upload_file(file: UploadFile = File(...)):
             detail=f"File upload failed: {str(e)}"
         )
 
-# ---------- ML PREDICTION ENDPOINT ----------
-@app.post("/ML/Predict", response_model=PredictionResponse)
-async def ml_prediction(request: PredictionRequest):
+# ---------- GET PREDICTION (With Query Parameters) ----------
+@app.get("/ML/Predict")
+async def ml_prediction_get(
+    file_path: str,
+    food_type: str = "veg",
+    budget: str = "medium",
+    days: int = 7
+):
     """
     Generate diet plan based on uploaded medical report.
-    Performs ML prediction and creates personalized diet recommendations.
+    Accepts user preferences via query parameters.
+    
+    Parameters:
+    - file_path: Path to uploaded file
+    - food_type: "veg" or "nonveg" (default: "veg")
+    - budget: "low", "medium", or "high" (default: "medium")
+    - days: Number of days for diet plan (1-30, default: 7)
     """
     try:
+        # Validate parameters
+        if food_type not in ["veg", "nonveg"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid food_type: {food_type}. Must be 'veg' or 'nonveg'"
+            )
+        
+        if budget not in ["low", "medium", "high"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid budget: {budget}. Must be 'low', 'medium', or 'high'"
+            )
+        
+        if not (1 <= days <= 30):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid days: {days}. Must be between 1 and 30"
+            )
+        
         # ---------- RESOLVE FILE PATH ----------
-        full_path = (PROJECT_ROOT / request.file_path).resolve()
+        full_path = (PROJECT_ROOT / file_path).resolve()
 
         logger.info("======== DEBUG ========")
         logger.info(f"PROJECT_ROOT : {PROJECT_ROOT}")
-        logger.info(f"INPUT PATH   : {request.file_path}")
+        logger.info(f"INPUT PATH   : {file_path}")
         logger.info(f"FULL PATH    : {full_path}")
         logger.info(f"EXISTS       : {full_path.exists()}")
+        logger.info(f"PREFERENCES  : food_type={food_type}, budget={budget}, days={days}")
         logger.info("=======================")
 
         if not full_path.exists():
@@ -206,11 +241,8 @@ async def ml_prediction(request: PredictionRequest):
 
         probs = model.predict_proba(input_data)
 
-
-        pred_index = int(np.argmax(probs)) 
-        print(pred_index)             # ✅ FIX
+        pred_index = int(np.argmax(probs))
         predicted_disease = labels[pred_index]
-        print(labels[pred_index])          # ✅ FIX
         confidence = round(float(probs[0][pred_index]), 4)
 
         logger.info(f"Prediction: {predicted_disease} (confidence: {confidence})")
@@ -231,7 +263,7 @@ async def ml_prediction(request: PredictionRequest):
 
         logger.info(f"Detected {len(detected_intents)} intents")
 
-        # ---------- USER PAYLOAD ----------
+        # ---------- USER PAYLOAD WITH PREFERENCES ----------
         user_payload = {
             "patient_profile": dataDF.iloc[0].to_dict(),
             "ml_prediction": {
@@ -240,18 +272,18 @@ async def ml_prediction(request: PredictionRequest):
             },
             "detected_intents": detected_intents,
             "user_preferences": {
-                "food_type": "veg",
-                "budget": "medium",
-                "days": 7
+                "food_type": food_type,
+                "budget": budget,
+                "days": days
             }
         }
 
         # ---------- LLM GENERATION ----------
-        logger.info("Generating diet plan with LLM...")
+        logger.info(f"Generating {days}-day diet plan with preferences: {food_type}, {budget}...")
         diet_response = generate_diet(
             context=text,
             payload=user_payload,
-            days=user_payload["user_preferences"]["days"]
+            days=days
         )
 
         logger.info("Diet plan generated successfully")
@@ -277,14 +309,19 @@ async def ml_prediction(request: PredictionRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-# ---------- GET PREDICTION (Legacy support) ----------
-@app.get("/ML/Predict")
-async def ml_prediction_get(file_path: str):
+# ---------- ML PREDICTION ENDPOINT (POST) ----------
+@app.post("/ML/Predict", response_model=PredictionResponse)
+async def ml_prediction(request: PredictionRequest):
     """
-    Legacy GET endpoint for backward compatibility.
-    Redirects to POST endpoint logic.
+    POST endpoint for diet plan generation.
+    Redirects to GET endpoint with extracted parameters.
     """
-    return await ml_prediction(PredictionRequest(file_path=file_path))
+    return await ml_prediction_get(
+        file_path=request.file_path,
+        food_type=request.food_type,
+        budget=request.budget,
+        days=request.days
+    )
 
 # ---------- HEALTH CHECK ----------
 @app.get("/")
@@ -297,7 +334,7 @@ def health_check():
         "upload_dir": str(UPLOAD_DIR),
         "endpoints": {
             "upload": "POST /upload",
-            "predict": "POST /ML/Predict",
+            "predict": "GET /ML/Predict?file_path=<path>&food_type=<veg|nonveg>&budget=<low|medium|high>&days=<1-30>",
             "health": "GET /"
         }
     }
