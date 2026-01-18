@@ -82,7 +82,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-
+.env/
 # IPython
 profile_default/
 ipython_config.py
