@@ -1,0 +1,26 @@
+HEALTH DIAGNOSTICS CENTER
+PATIENT MEDICAL REPORT #350
+Date: 14/12/2025
+
+PATIENT: Fred Kim
+Age: 68 years | Gender: Female | Blood Group: B-
+
+CLINICAL ASSESSMENT:
+This 68-year-old female patient presents with:
+
+HEMATOLOGY:
+• Hemoglobin: 11.0 g/dL - MILD ANEMIA - Dietary iron
+• Anemia Status: Moderate
+
+METABOLIC:
+• PPBS: 81 mg/dL - NORMAL
+• BMI: 22.2 - NORMAL
+• Diabetes: Yes
+
+CARDIOVASCULAR:
+• BP: 115/77 mmHg
+• Cholesterol: 183 mg/dL
+
+LIFESTYLE: Smoker: No | Activity: Moderate
+
+Dr. A. Sharma, MD

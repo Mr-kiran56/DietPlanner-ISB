@@ -1,0 +1,26 @@
+HEALTH DIAGNOSTICS CENTER
+PATIENT MEDICAL REPORT #15
+Date: 14/12/2025
+
+PATIENT: Scott Weber
+Age: 30 years | Gender: Male | Blood Group: AB-
+
+CLINICAL ASSESSMENT:
+This 30-year-old male patient presents with:
+
+HEMATOLOGY:
+• Hemoglobin: 14.2 g/dL - NORMAL
+• Anemia Status: Normal
+
+METABOLIC:
+• PPBS: 119 mg/dL - NORMAL
+• BMI: 31.9 - OBESE
+• Diabetes: Yes
+
+CARDIOVASCULAR:
+• BP: 127/83 mmHg
+• Cholesterol: 122 mg/dL
+
+LIFESTYLE: Smoker: Yes | Activity: Low
+
+Dr. A. Sharma, MD

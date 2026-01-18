@@ -5,6 +5,7 @@ const DietPlanner = () => {
   const [step, setStep] = useState(1);
   const [uploadType, setUploadType] = useState(null);
   const [file, setFile] = useState(null);
+  const [uploadedFilePath, setUploadedFilePath] = useState(null);
   const [preferences, setPreferences] = useState({
     foodType: 'veg',
     budget: 'medium',
@@ -12,78 +13,99 @@ const DietPlanner = () => {
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [selectedDay, setSelectedDay] = useState('day_1');
 
-  const handleFileUpload = (e, type) => {
+  const API_BASE_URL = 'http://127.0.0.1:8000';
+
+  // Parse the nested JSON structure from API response
+  const parseDietPlan = (apiResponse) => {
+    try {
+      let dietPlanData = apiResponse.diet_plan;
+      
+      // If diet_plan is a string containing JSON, parse it
+      if (typeof dietPlanData === 'string') {
+        // Remove markdown code blocks if present
+        dietPlanData = dietPlanData.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        dietPlanData = JSON.parse(dietPlanData);
+      }
+      
+      return dietPlanData;
+    } catch (e) {
+      console.error('Failed to parse diet plan:', e);
+      return null;
+    }
+  };
+
+  const handleFileUpload = async (e, type) => {
     const uploadedFile = e.target.files[0];
-    if (uploadedFile) {
-      setFile(uploadedFile);
-      setUploadType(type);
+    if (!uploadedFile) return;
+
+    setFile(uploadedFile);
+    setUploadType(type);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+
+      const uploadResponse = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('File upload failed');
+      }
+
+      const uploadData = await uploadResponse.json();
+      setUploadedFilePath(uploadData.file_path);
       setStep(2);
+    } catch (err) {
+      setError(`Upload failed: ${err.message}`);
+      setFile(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGenerate = async () => {
     setLoading(true);
-    
-    // Replace this with your actual API call
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('food_type', preferences.foodType);
-    formData.append('budget', preferences.budget);
-    formData.append('days', preferences.days);
+    setError(null);
 
     try {
-      // Simulated API call - replace with actual endpoint
-      setTimeout(() => {
-        setResult({
-          ml_prediction: {
-            predicted_disease: "3",
-            confidence: 0.9896
-          },
-          assessment: {
-            conditions: ["Overweight"],
-            severity: "High",
-            metrics: [
-              { metric: "BMI", value: 26.4, interpretation: "Overweight" },
-              { metric: "Cholesterol", value: 177, interpretation: "High" },
-              { metric: "PPBS", value: 70, interpretation: "Normal" },
-              { metric: "Hemoglobin", value: 12.6, interpretation: "Normal" }
-            ]
-          },
-          diet_plan: {
-            day_1: ["Oatmeal", "Banana", "Carrot"],
-            day_2: ["Brown Rice", "Lentils", "Spinach"],
-            day_3: ["Quinoa", "Broccoli", "Apple"],
-            day_4: ["Whole Wheat Bread", "Avocado", "Orange"],
-            day_5: ["Sweet Potato", "Green Beans", "Berries"],
-            day_6: ["Barley", "Tomato", "Grapes"],
-            day_7: ["Millet", "Cucumber", "Watermelon"]
-          },
-          justification: [
-            { food: "Oatmeal", reason: "High in fiber, helps lower cholesterol" },
-            { food: "Banana", reason: "Rich in potassium, helps lower blood pressure" },
-            { food: "Brown Rice", reason: "High fiber, low fat content" }
-          ]
-        });
-        setLoading(false);
-        setStep(3);
-      }, 2000);
-
-      /* 
-      // Actual API call example:
-      const response = await fetch('http://127.0.0.1:8000/ML/Predict', {
-        method: 'POST',
-        body: formData
+      const params = new URLSearchParams({
+        file_path: uploadedFilePath,
       });
+
+      const response = await fetch(`${API_BASE_URL}/ML/Predict?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to generate diet plan');
+      }
+
       const data = await response.json();
-      setResult(data);
-      setLoading(false);
+      
+      // Parse the nested JSON structure
+      const parsedPlan = parseDietPlan(data);
+      
+      setResult({
+        ml_prediction: data.ml_prediction,
+        parsedData: parsedPlan
+      });
       setStep(3);
-      */
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err) {
+      setError(`Generation failed: ${err.message}`);
+      console.error('Error:', err);
+    } finally {
       setLoading(false);
-      alert('Failed to generate diet plan. Please try again.');
     }
   };
 
@@ -91,19 +113,48 @@ const DietPlanner = () => {
     setStep(1);
     setUploadType(null);
     setFile(null);
+    setUploadedFilePath(null);
     setPreferences({ foodType: 'veg', budget: 'medium', days: 7 });
     setResult(null);
+    setError(null);
+    setSelectedDay('day_1');
+  };
+
+  const renderMealTime = (mealData, timeLabel) => {
+    if (!mealData || mealData.length === 0) return null;
+    
+    return (
+      <div className="meal-time-section">
+        <h5 className="meal-time-label">{timeLabel}</h5>
+        <div className="meal-items">
+          {mealData.map((item, idx) => (
+            <div key={idx} className="meal-item">
+              <div className="meal-item-header">
+                <span className="food-name">{item.food}</span>
+                <span className="calories">{item.approx_calories}</span>
+              </div>
+              {item.portion && (
+                <p className="portion">Portion: {item.portion}</p>
+              )}
+              <p className="benefit">{item.nutritional_benefit}</p>
+              {item.source && (
+                <p className="source">Source: {item.source}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="diet-planner">
-      {/* Header */}
+    <div className="app-container">
       <header className="header">
         <div className="container">
           <div className="header-content">
             <div className="logo-section">
               <div className="logo-icon">🥗</div>
-              <div className="logo-text">
+              <div>
                 <h1>DietPlanner AI</h1>
                 <p>Personalized nutrition guidance</p>
               </div>
@@ -119,60 +170,59 @@ const DietPlanner = () => {
 
       <main className="main-content">
         <div className="container">
-          
-          {/* Step 1: Upload Options */}
-          {step === 1 && (
-            <div className="step-container">
-              <div className="step-header">
-                <h2>Upload Your Medical Report</h2>
-                <p>Choose how you'd like to share your medical information with our AI system</p>
-              </div>
-
-              <div className="upload-grid">
-                <label className="upload-card">
-                  <input
-                    type="file"
-                    accept=".txt,.doc,.docx"
-                    onChange={(e) => handleFileUpload(e, 'text')}
-                    style={{ display: 'none' }}
-                  />
-                  <div className="upload-icon blue">📄</div>
-                  <h3>Text Document</h3>
-                  <p>Upload .txt, .doc, or .docx files</p>
-                </label>
-
-                <label className="upload-card">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => handleFileUpload(e, 'pdf')}
-                    style={{ display: 'none' }}
-                  />
-                  <div className="upload-icon indigo">📋</div>
-                  <h3>PDF Document</h3>
-                  <p>Upload PDF medical reports</p>
-                </label>
-
-                <label className="upload-card">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileUpload(e, 'image')}
-                    style={{ display: 'none' }}
-                  />
-                  <div className="upload-icon violet">🖼️</div>
-                  <h3>Scanned Image</h3>
-                  <p>Upload scanned report images</p>
-                </label>
+          {error && (
+            <div className="error-box">
+              <div className="error-icon">⚠️</div>
+              <div>
+                <p className="error-title">Error</p>
+                <p className="error-message">{error}</p>
               </div>
             </div>
           )}
 
-          {/* Step 2: Preferences */}
+          {step === 1 && (
+            <div className="step-container">
+              <div className="text-center mb-large">
+                <h2 className="page-title">Upload Your Medical Report</h2>
+                <p className="page-subtitle">
+                  Choose how you'd like to share your medical information
+                </p>
+              </div>
+
+              <div className="upload-grid">
+                {[
+                  { icon: '📄', type: 'text', label: 'Text Document', accept: '.txt,.doc,.docx' },
+                  { icon: '📋', type: 'pdf', label: 'PDF Document', accept: '.pdf' },
+                  { icon: '🖼️', type: 'image', label: 'Scanned Image', accept: 'image/*' }
+                ].map(({ icon, type, label, accept }) => (
+                  <label key={type} className="upload-card">
+                    <input
+                      type="file"
+                      accept={accept}
+                      onChange={(e) => handleFileUpload(e, type)}
+                      style={{ display: 'none' }}
+                      disabled={loading}
+                    />
+                    <div className="upload-icon">{icon}</div>
+                    <h3>{label}</h3>
+                    <p>Upload {accept.split(',')[0]} files</p>
+                  </label>
+                ))}
+              </div>
+
+              {loading && (
+                <div className="loading-box">
+                  <div className="spinner"></div>
+                  <p>Uploading file...</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {step === 2 && (
             <div className="step-container">
               <div className="preferences-card">
-                <div className="file-upload-success">
+                <div className="success-header">
                   <div className="success-icon">✓</div>
                   <div>
                     <h3>File Uploaded Successfully</h3>
@@ -181,34 +231,29 @@ const DietPlanner = () => {
                 </div>
 
                 <div className="preferences-form">
-                  <h2>Set Your Preferences</h2>
+                  <h2 className="form-title">Set Your Preferences</h2>
 
-                  {/* Food Type */}
                   <div className="form-group">
                     <label className="form-label">
-                      <span className="icon">🥗</span>
+                      <span className="label-icon">🥗</span>
                       Food Preference
                     </label>
                     <div className="button-group two-col">
-                      <button
-                        onClick={() => setPreferences({...preferences, foodType: 'veg'})}
-                        className={`option-btn ${preferences.foodType === 'veg' ? 'active green' : ''}`}
-                      >
-                        Vegetarian
-                      </button>
-                      <button
-                        onClick={() => setPreferences({...preferences, foodType: 'nonveg'})}
-                        className={`option-btn ${preferences.foodType === 'nonveg' ? 'active orange' : ''}`}
-                      >
-                        Non-Vegetarian
-                      </button>
+                      {['veg', 'nonveg'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setPreferences({...preferences, foodType: type})}
+                          className={`option-btn ${preferences.foodType === type ? `active ${type}` : ''}`}
+                        >
+                          {type === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Budget */}
                   <div className="form-group">
                     <label className="form-label">
-                      <span className="icon">💰</span>
+                      <span className="label-icon">💰</span>
                       Budget Range
                     </label>
                     <div className="button-group three-col">
@@ -224,10 +269,9 @@ const DietPlanner = () => {
                     </div>
                   </div>
 
-                  {/* Days */}
                   <div className="form-group">
                     <label className="form-label">
-                      <span className="icon">📅</span>
+                      <span className="label-icon">📅</span>
                       Diet Plan Duration (Days)
                     </label>
                     <input
@@ -245,7 +289,6 @@ const DietPlanner = () => {
                     </div>
                   </div>
 
-                  {/* Generate Button */}
                   <button
                     onClick={handleGenerate}
                     disabled={loading}
@@ -265,94 +308,215 @@ const DietPlanner = () => {
             </div>
           )}
 
-          {/* Step 3: Results */}
-          {step === 3 && result && (
+          {step === 3 && result && result.parsedData && (
             <div className="step-container">
-              <div className="results-header">
-                <h2>Your Personalized Diet Plan</h2>
-                <p>Based on your medical analysis and preferences</p>
+              <div className="text-center mb-large">
+                <h2 className="page-title">Your Personalized Diet Plan</h2>
+                <p className="page-subtitle">Based on your medical analysis</p>
               </div>
 
               {/* ML Prediction */}
               <div className="result-card">
-                <h3 className="card-title">🔬 Medical Analysis</h3>
-                <div className="prediction-grid">
-                  <div className="prediction-item">
-                    <p className="label">Predicted Condition</p>
-                    <p className="value large">Condition #{result.ml_prediction.predicted_disease}</p>
-                  </div>
-                  <div className="prediction-item">
-                    <p className="label">Confidence Level</p>
-                    <div className="confidence-bar">
-                      <div className="progress-bar">
-                        <div 
-                          className="progress-fill"
-                          style={{ width: `${result.ml_prediction.confidence * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="confidence-value">
-                        {(result.ml_prediction.confidence * 100).toFixed(1)}%
-                      </span>
+                <div className="prediction-box">
+                  <p className="prediction-label">Predicted Condition</p>
+                  <p className="prediction-value">{result.ml_prediction.predicted_disease}</p>
+                  <div className="confidence-bar-container">
+                    <span className="confidence-label">Confidence:</span>
+                    <div className="progress-bar">
+                      <div 
+                        className="progress-fill"
+                        style={{ width: `${result.ml_prediction.confidence * 100}%` }}
+                      ></div>
                     </div>
+                    <span className="confidence-value">
+                      {(result.ml_prediction.confidence * 100).toFixed(1)}%
+                    </span>
                   </div>
                 </div>
+
+                {result.parsedData.medical_assessment?.ml_prediction?.explanation && (
+                  <p className="explanation-text">
+                    {result.parsedData.medical_assessment.ml_prediction.explanation}
+                  </p>
+                )}
               </div>
 
               {/* Health Metrics */}
-              <div className="result-card">
-                <h3 className="card-title">📊 Health Metrics</h3>
-                <div className="metrics-grid">
-                  {result.assessment.metrics.map((metric, idx) => (
-                    <div key={idx} className="metric-item">
-                      <div className="metric-header">
-                        <p className="metric-name">{metric.metric}</p>
-                        <span className={`badge ${metric.interpretation.toLowerCase()}`}>
-                          {metric.interpretation}
+              {result.parsedData.medical_assessment?.metric_analysis && 
+               result.parsedData.medical_assessment.metric_analysis.length > 0 && (
+                <div className="result-card">
+                  <h3 className="card-title">📊 Health Metrics Analysis</h3>
+                  <div className="metrics-grid">
+                    {result.parsedData.medical_assessment.metric_analysis.map((metric, idx) => (
+                      <div key={idx} className="metric-card">
+                        <p className="metric-label">{metric.metric}</p>
+                        <p className="metric-value">{metric.value}</p>
+                        <span className={`metric-status ${(metric.status || metric.interpretation || '').toLowerCase()}`}>
+                          {metric.status || metric.interpretation}
                         </span>
+                        {metric.interpretation && metric.interpretation !== metric.status && (
+                          <p className="metric-interpretation">
+                            {metric.interpretation}
+                          </p>
+                        )}
+                        {metric.action_needed && (
+                          <p className="metric-action">
+                            💡 {metric.action_needed}
+                          </p>
+                        )}
                       </div>
-                      <p className="metric-value">{metric.value}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Diet Plan */}
-              <div className="result-card">
-                <h3 className="card-title">🍽️ Your {preferences.days}-Day Diet Plan</h3>
-                <div className="diet-grid">
-                  {Object.entries(result.diet_plan).slice(0, preferences.days).map(([day, foods], idx) => (
-                    <div key={day} className="diet-day">
-                      <h4>Day {idx + 1}</h4>
-                      <ul>
-                        {foods.map((food, i) => (
-                          <li key={i}>{food}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {result.parsedData.diet_plan && (
+                <div className="result-card">
+                  <h3 className="card-title">🍽️ Your Weekly Diet Plan</h3>
+                  
+                  <div className="diet-tabs">
+                    {Object.keys(result.parsedData.diet_plan).map((day, idx) => (
+                      <button
+                        key={day}
+                        onClick={() => setSelectedDay(day)}
+                        className={`diet-tab ${selectedDay === day ? 'active' : ''}`}
+                      >
+                        Day {idx + 1}
+                      </button>
+                    ))}
+                  </div>
 
-              {/* Justification */}
-              <div className="result-card">
-                <h3 className="card-title">📋 Why These Foods?</h3>
-                <div className="justification-list">
-                  {result.justification.map((item, idx) => (
-                    <div key={idx} className="justification-item">
-                      <h4>{item.food}</h4>
-                      <p>{item.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                  <div className="day-content">
+                    {result.parsedData.diet_plan[selectedDay] && (
+                      <>
+                        {renderMealTime(result.parsedData.diet_plan[selectedDay].morning, '🌅 Morning')}
+                        {renderMealTime(result.parsedData.diet_plan[selectedDay].afternoon, '☀️ Afternoon')}
+                        {renderMealTime(result.parsedData.diet_plan[selectedDay].evening, '🌆 Evening')}
+                        {renderMealTime(result.parsedData.diet_plan[selectedDay].night, '🌙 Night')}
+                      </>
+                    )}
+                  </div>
 
-              {/* Action Buttons */}
+                  {result.parsedData.daily_estimated_calories && (
+                    <div className="calorie-summary">
+                      <p><strong>Daily Calorie Target:</strong> {result.parsedData.daily_estimated_calories[selectedDay] || result.parsedData.daily_estimated_calories.target_range}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Dietary Recommendations */}
+              {result.parsedData.dietary_recommendations && (
+                <div className="result-card">
+                  <h3 className="card-title">📋 Dietary Recommendations</h3>
+                  <div className="recommendations-section">
+                    {result.parsedData.dietary_recommendations.foods_to_favor && (
+                      <div className="recommendation-card favor">
+                        <h4>✅ Foods to Favor</h4>
+                        <ul>
+                          {result.parsedData.dietary_recommendations.foods_to_favor.map((food, idx) => (
+                            <li key={idx}>{food}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {result.parsedData.dietary_recommendations.foods_to_limit && (
+                      <div className="recommendation-card limit">
+                        <h4>⚠️ Foods to Limit</h4>
+                        <ul>
+                          {result.parsedData.dietary_recommendations.foods_to_limit.map((food, idx) => (
+                            <li key={idx}>{food}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {result.parsedData.dietary_recommendations.key_nutrients && (
+                      <div className="recommendation-card nutrients">
+                        <h4>🔬 Key Nutrients</h4>
+                        <ul>
+                          {result.parsedData.dietary_recommendations.key_nutrients.map((nutrient, idx) => (
+                            <li key={idx}>{nutrient}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {result.parsedData.dietary_recommendations.lifestyle_tips && (
+                      <div className="recommendation-card lifestyle">
+                        <h4>💪 Lifestyle Tips</h4>
+                        <ul>
+                          {result.parsedData.dietary_recommendations.lifestyle_tips.map((tip, idx) => (
+                            <li key={idx}>{tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Diet Justification */}
+              {result.parsedData.diet_justification && result.parsedData.diet_justification.length > 0 && (
+                <div className="result-card">
+                  <h3 className="card-title">🔍 Why These Foods?</h3>
+                  <div className="justification-list">
+                    {result.parsedData.diet_justification.map((item, idx) => (
+                      <div key={idx} className="justification-item">
+                        <h4>{item.food}</h4>
+                        <p className="justification-reason">
+                          <strong>Benefit:</strong> {item.reason || item.mechanism}
+                        </p>
+                        {item.condition_addressed && (
+                          <p className="justification-condition">
+                            <strong>Addresses:</strong> {item.condition_addressed}
+                          </p>
+                        )}
+                        {item.source && (
+                          <p className="justification-source">
+                            <em>Source: {item.source}</em>
+                          </p>
+                        )}
+                        {item.frequency && (
+                          <p className="justification-frequency">
+                            <strong>Frequency:</strong> {item.frequency}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Data Sources */}
+              {result.parsedData.data_sources && (
+                <div className="result-card">
+                  <h3 className="card-title">📚 Data Sources</h3>
+                  <div className="data-sources-info">
+                    <p><strong>From RAG Context:</strong> {result.parsedData.data_sources.from_rag_context}</p>
+                    <p><strong>From Clinical Guidelines:</strong> {result.parsedData.data_sources.from_clinical_guidelines}</p>
+                    {result.parsedData.data_sources.rationale && (
+                      <p className="rationale"><em>{result.parsedData.data_sources.rationale}</em></p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Disclaimer */}
+              {result.parsedData.medical_note && (
+                <div className="disclaimer-box">
+                  <p><strong>⚠️ Medical Disclaimer:</strong> {result.parsedData.medical_note}</p>
+                </div>
+              )}
+
               <div className="action-buttons">
                 <button onClick={() => window.print()} className="btn-secondary">
-                  Download PDF
+                  📄 Download PDF
                 </button>
                 <button onClick={resetFlow} className="btn-primary">
-                  Create New Plan
+                  🔄 Create New Plan
                 </button>
               </div>
             </div>

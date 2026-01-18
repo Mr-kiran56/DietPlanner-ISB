@@ -1,0 +1,26 @@
+HEALTH DIAGNOSTICS CENTER
+PATIENT MEDICAL REPORT #191
+Date: 14/12/2025
+
+PATIENT: Kristy Ballard
+Age: 48 years | Gender: Male | Blood Group: A-
+
+CLINICAL ASSESSMENT:
+This 48-year-old male patient presents with:
+
+HEMATOLOGY:
+• Hemoglobin: 12.9 g/dL - NORMAL
+• Anemia Status: Normal
+
+METABOLIC:
+• PPBS: 195 mg/dL - PREDIABETES
+• BMI: 24.6 - NORMAL
+• Diabetes: Yes
+
+CARDIOVASCULAR:
+• BP: 136/88 mmHg
+• Cholesterol: 182 mg/dL
+
+LIFESTYLE: Smoker: No | Activity: Moderate
+
+Dr. A. Sharma, MD

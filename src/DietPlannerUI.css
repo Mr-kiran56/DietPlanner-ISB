@@ -1,33 +1,4 @@
-/* ==================== VARIABLES ==================== */
-:root {
-  --primary: #2563eb;
-  --primary-dark: #1e40af;
-  --secondary: #64748b;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-blue: #eff6ff;
-  --bg-indigo: #eef2ff;
-  --bg-violet: #f5f3ff;
-  
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  
-  --border: #e2e8f0;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-  
-  --radius: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-}
-
-/* ==================== RESET ==================== */
+/* ==================== RESET & BASE ==================== */
 * {
   margin: 0;
   padding: 0;
@@ -36,27 +7,29 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 50%, #eef2ff 100%);
-  color: var(--text-primary);
   line-height: 1.6;
-  min-height: 100vh;
+  color: #0f172a;
 }
 
-/* ==================== CONTAINER ==================== */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
+.app-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 50%, #eef2ff 100%);
 }
 
 /* ==================== HEADER ==================== */
 .header {
   background: white;
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .header-content {
@@ -75,24 +48,24 @@ body {
 .logo-icon {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
-  border-radius: var(--radius);
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
 }
 
-.logo-text h1 {
+.logo-section h1 {
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #0f172a;
   margin-bottom: 2px;
 }
 
-.logo-text p {
+.logo-section p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #64748b;
 }
 
 /* ==================== MAIN CONTENT ==================== */
@@ -115,23 +88,53 @@ body {
   }
 }
 
-.step-header {
+.text-center {
   text-align: center;
+}
+
+.mb-large {
   margin-bottom: 48px;
 }
 
-.step-header h2 {
+.page-title {
   font-size: 36px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #0f172a;
   margin-bottom: 12px;
 }
 
-.step-header p {
+.page-subtitle {
   font-size: 16px;
-  color: var(--text-secondary);
+  color: #64748b;
   max-width: 600px;
   margin: 0 auto;
+}
+
+/* ==================== ERROR BOX ==================== */
+.error-box {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  display: flex;
+  align-items: start;
+  gap: 12px;
+}
+
+.error-icon {
+  font-size: 20px;
+}
+
+.error-title {
+  font-weight: 600;
+  color: #991b1b;
+  margin-bottom: 4px;
+}
+
+.error-message {
+  font-size: 14px;
+  color: #b91c1c;
 }
 
 /* ==================== UPLOAD GRID ==================== */
@@ -145,8 +148,8 @@ body {
 
 .upload-card {
   background: white;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-xl);
+  border: 2px solid #e2e8f0;
+  border-radius: 20px;
   padding: 40px 32px;
   text-align: center;
   cursor: pointer;
@@ -154,66 +157,68 @@ body {
 }
 
 .upload-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow-xl);
+  border-color: #2563eb;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
   transform: translateY(-4px);
 }
 
 .upload-icon {
-  width: 80px;
-  height: 80px;
+  font-size: 60px;
   margin: 0 auto 20px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  transition: transform 0.3s ease;
-}
-
-.upload-card:hover .upload-icon {
-  transform: scale(1.1);
-}
-
-.upload-icon.blue {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-}
-
-.upload-icon.indigo {
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-}
-
-.upload-icon.violet {
-  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
 }
 
 .upload-card h3 {
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #0f172a;
   margin-bottom: 8px;
 }
 
 .upload-card p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #64748b;
 }
 
-/* ==================== PREFERENCES ==================== */
+/* ==================== LOADING ==================== */
+.loading-box {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(37, 99, 235, 0.3);
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-box p {
+  color: #64748b;
+}
+
+/* ==================== PREFERENCES CARD ==================== */
 .preferences-card {
   max-width: 700px;
   margin: 0 auto;
   background: white;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
 }
 
-.file-upload-success {
+.success-header {
   background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
   padding: 32px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -223,35 +228,36 @@ body {
   width: 48px;
   height: 48px;
   background: white;
-  border-radius: var(--radius);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  color: var(--success);
-  box-shadow: var(--shadow-sm);
+  color: #10b981;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
-.file-upload-success h3 {
+.success-header h3 {
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #0f172a;
   margin-bottom: 4px;
 }
 
-.file-upload-success p {
+.success-header p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #64748b;
 }
 
+/* ==================== PREFERENCES FORM ==================== */
 .preferences-form {
   padding: 40px;
 }
 
-.preferences-form h2 {
+.form-title {
   font-size: 28px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #0f172a;
   margin-bottom: 32px;
 }
 
@@ -265,11 +271,11 @@ body {
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #0f172a;
   margin-bottom: 12px;
 }
 
-.form-label .icon {
+.label-icon {
   font-size: 18px;
 }
 
@@ -288,12 +294,12 @@ body {
 
 .option-btn {
   padding: 16px 24px;
-  border: 2px solid var(--border);
+  border: 2px solid #e2e8f0;
   background: #f8fafc;
-  border-radius: var(--radius);
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #0f172a;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -305,15 +311,15 @@ body {
 .option-btn.active {
   color: white;
   border-color: transparent;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   transform: scale(1.05);
 }
 
-.option-btn.active.green {
+.option-btn.active.veg {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
-.option-btn.active.orange {
+.option-btn.active.nonveg {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
 }
 
@@ -321,10 +327,11 @@ body {
   background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
 }
 
+/* ==================== RANGE SLIDER ==================== */
 .range-slider {
   width: 100%;
   height: 8px;
-  background: var(--border);
+  background: #e2e8f0;
   border-radius: 4px;
   outline: none;
   -webkit-appearance: none;
@@ -339,7 +346,7 @@ body {
   background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: var(--shadow);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 .range-slider::-moz-range-thumb {
@@ -349,14 +356,14 @@ body {
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  box-shadow: var(--shadow);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 .range-labels {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #64748b;
 }
 
 .range-value {
@@ -367,11 +374,11 @@ body {
 
 /* ==================== BUTTONS ==================== */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   color: white;
   border: none;
   padding: 16px 32px;
-  border-radius: var(--radius);
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -383,7 +390,7 @@ body {
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
   transform: scale(1.05);
 }
 
@@ -398,10 +405,10 @@ body {
 
 .btn-secondary {
   background: white;
-  color: var(--text-primary);
-  border: 2px solid var(--border);
+  color: #0f172a;
+  border: 2px solid #e2e8f0;
   padding: 12px 24px;
-  border-radius: var(--radius);
+  border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -409,46 +416,16 @@ body {
 }
 
 .btn-secondary:hover {
-  border-color: var(--secondary);
-  box-shadow: var(--shadow);
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(255,255,255,0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  border-color: #64748b;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 /* ==================== RESULTS ==================== */
-.results-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.results-header h2 {
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.results-header p {
-  font-size: 16px;
-  color: var(--text-secondary);
-}
-
 .result-card {
   background: white;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  border: 1px solid #e2e8f0;
   padding: 32px;
   margin-bottom: 24px;
 }
@@ -456,46 +433,59 @@ body {
 .card-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #0f172a;
   margin-bottom: 24px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.prediction-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 24px;
+/* ==================== PREDICTION BOX ==================== */
+.prediction-box {
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border: 2px solid #93c5fd;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
 }
 
-.prediction-item .label {
+.prediction-label {
   font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.prediction-item .value {
-  font-size: 18px;
+  color: #1e3a8a;
   font-weight: 600;
-  color: var(--text-primary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.prediction-item .value.large {
-  font-size: 28px;
+.prediction-value {
+  font-size: 32px;
   font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 16px;
+  line-height: 1.2;
 }
 
-.confidence-bar {
+.confidence-bar-container {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+
+.confidence-label {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+  min-width: 90px;
 }
 
 .progress-bar {
   flex: 1;
   height: 12px;
-  background: var(--border);
+  background: #e2e8f0;
   border-radius: 6px;
   overflow: hidden;
 }
@@ -504,138 +494,399 @@ body {
   height: 100%;
   background: linear-gradient(90deg, #10b981 0%, #059669 100%);
   transition: width 0.5s ease;
+  border-radius: 6px;
 }
 
 .confidence-value {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--success);
+  color: #10b981;
+  min-width: 60px;
+  text-align: right;
 }
 
+.explanation-text {
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* ==================== METRICS ==================== */
 .metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  transform: translateY(-2px);
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.metric-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.metric-status.normal {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.metric-status.abnormal,
+.metric-status.high {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.metric-status.overweight,
+.metric-status.underweight,
+.metric-status.low,
+.metric-status.borderline {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.metric-interpretation {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.metric-action {
+  font-size: 12px;
+  color: #059669;
+  margin-top: 8px;
+  background: #d1fae5;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+/* ==================== DIET PLAN ==================== */
+.diet-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.diet-tab {
+  padding: 12px 24px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.diet-tab:hover {
+  background: #f1f5f9;
+}
+
+.diet-tab.active {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.day-content {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.meal-time-section {
+  margin-bottom: 28px;
+}
+
+.meal-time-section:last-child {
+  margin-bottom: 0;
+}
+
+.meal-time-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meal-items {
+  display: grid;
+  gap: 12px;
+}
+
+.meal-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.meal-item:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  border-color: #cbd5e1;
+}
+
+.meal-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.food-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  flex: 1;
+}
+
+.calories {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #78350f;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.portion {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.benefit {
+  font-size: 14px;
+  color: #059669;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.source {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.calorie-summary {
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.calorie-summary p {
+  color: #78350f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ==================== RECOMMENDATIONS ==================== */
+.recommendations-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
 }
 
-.metric-item {
-  padding: 20px;
+.recommendation-card {
   background: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.metric-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
-
-.metric-name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.badge.normal {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge.high {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.badge.overweight {
-  background: #fed7aa;
-  color: #9a3412;
-}
-
-.metric-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.diet-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.diet-day {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   padding: 20px;
-  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-  border: 1px solid #bfdbfe;
-  border-radius: var(--radius);
 }
 
-.diet-day h4 {
+.recommendation-card.favor {
+  border-left: 4px solid #10b981;
+}
+
+.recommendation-card.limit {
+  border-left: 4px solid #f59e0b;
+}
+
+.recommendation-card.nutrients {
+  border-left: 4px solid #8b5cf6;
+}
+
+.recommendation-card.lifestyle {
+  border-left: 4px solid #3b82f6;
+}
+
+.recommendation-card h4 {
+  font-size: 14px;
   font-weight: 700;
-  color: #1e3a8a;
+  color: #0f172a;
   margin-bottom: 12px;
 }
 
-.diet-day ul {
+.recommendation-card ul {
   list-style: none;
 }
 
-.diet-day li {
-  padding: 4px 0;
-  padding-left: 16px;
+.recommendation-card li {
+  padding: 6px 0;
+  padding-left: 20px;
   position: relative;
   font-size: 14px;
-  color: var(--text-primary);
+  color: #475569;
+  line-height: 1.5;
 }
 
-.diet-day li::before {
-  content: '';
+.recommendation-card.favor li::before {
+  content: '✓';
   position: absolute;
   left: 0;
-  top: 12px;
-  width: 6px;
-  height: 6px;
-  background: var(--primary);
-  border-radius: 50%;
+  color: #10b981;
+  font-weight: 700;
 }
 
+.recommendation-card.limit li::before {
+  content: '⚠';
+  position: absolute;
+  left: 0;
+  color: #f59e0b;
+}
+
+.recommendation-card.nutrients li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #8b5cf6;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.recommendation-card.lifestyle li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+/* ==================== JUSTIFICATION ==================== */
 .justification-list {
   display: grid;
   gap: 16px;
 }
 
 .justification-item {
-  padding: 20px;
   background: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #2563eb;
+  border-radius: 12px;
+  padding: 20px;
 }
 
 .justification-item h4 {
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.justification-reason,
+.justification-condition,
+.justification-frequency {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
   margin-bottom: 8px;
 }
 
-.justification-item p {
+.justification-source {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* ==================== DATA SOURCES ==================== */
+.data-sources-info {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.data-sources-info p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.data-sources-info .rationale {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* ==================== DISCLAIMER ==================== */
+.disclaimer-box {
+  background: #fef3c7;
+  border: 2px solid #fde047;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.disclaimer-box p {
+  font-size: 14px;
+  color: #78350f;
   line-height: 1.6;
 }
 
+/* ==================== ACTION BUTTONS ==================== */
 .action-buttons {
   display: flex;
   gap: 16px;
   justify-content: center;
   padding-top: 16px;
+  flex-wrap: wrap;
 }
 
 /* ==================== RESPONSIVE ==================== */
@@ -655,12 +906,15 @@ body {
     grid-template-columns: 1fr;
   }
   
-  .prediction-grid,
   .metrics-grid {
     grid-template-columns: 1fr;
   }
   
-  .diet-grid {
+  .diet-tabs {
+    justify-content: flex-start;
+  }
+  
+  .recommendations-section {
     grid-template-columns: 1fr;
   }
   
@@ -673,23 +927,52 @@ body {
     width: 100%;
   }
   
-  .step-header h2 {
+  .page-title {
     font-size: 28px;
   }
   
-  .results-header h2 {
-    font-size: 28px;
+  .prediction-value {
+    font-size: 24px;
+  }
+  
+  .meal-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .calories {
+    align-self: flex-start;
   }
 }
 
+@media (max-width: 480px) {
+  .container {
+    padding: 0 16px;
+  }
+  
+  .preferences-form {
+    padding: 24px;
+  }
+  
+  .result-card {
+    padding: 20px;
+  }
+  
+  .day-content {
+    padding: 16px;
+  }
+}
+
+/* ==================== PRINT STYLES ==================== */
 @media print {
   .header,
   .action-buttons,
-  .btn-secondary {
+  .btn-secondary,
+  .diet-tabs {
     display: none;
   }
   
-  body {
+  .app-container {
     background: white;
   }
   
@@ -697,5 +980,10 @@ body {
     page-break-inside: avoid;
     box-shadow: none;
     border: 1px solid #ddd;
+    margin-bottom: 16px;
+  }
+  
+  .step-container {
+    animation: none;
   }
 }

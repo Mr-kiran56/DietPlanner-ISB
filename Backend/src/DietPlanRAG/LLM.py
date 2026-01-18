@@ -16,7 +16,8 @@ def generate_diet(
     
     llm = ChatNVIDIA(
         model="meta/llama-3.1-8b-instruct",
-        temperature=0.1
+        temperature=0.1,
+        max_tokens=7000
     )
 
     prompt = unified_medical_prompt()
