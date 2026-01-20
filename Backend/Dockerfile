@@ -1,8 +1,8 @@
 # Base image
 FROM python:3.10-slim
 
-# Set working directory
-WORKDIR /app
+# Set working directory inside container
+WORKDIR /app/Backend
 
 # Install system dependencies needed for ML, OpenCV, dlib, etc.
 RUN apt-get update && apt-get install -y \
@@ -17,22 +17,17 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip
+# Upgrade pip to latest
 RUN pip install --upgrade pip
 
-# Copy requirements.txt from the backend folder
+# Copy requirements.txt and backend code
 COPY requirements.txt ./
+COPY . ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire backend folder
-COPY ./Backend ./Backend
-
-# Set working directory to backend
-WORKDIR /app/Backend
-
-# Expose the FastAPI port
+# Expose FastAPI port
 EXPOSE 8000
 
 # Start the FastAPI app
