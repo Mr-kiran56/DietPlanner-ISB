@@ -17,15 +17,17 @@ env:
   FRONTEND_REPO: dietplanner-frontend
   IMAGE_TAG: latest
 
-#ci
-
 jobs:
+  # ======================
+  #  Continuous Integration
+  # ======================
   ci:
     name: Continuous Integration
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Lint
         run: echo "Linting code"
@@ -33,16 +35,17 @@ jobs:
       - name: Tests
         run: echo "Running tests"
 
-# ======================
-#  BUILD & PUSH
-# ======================
+  # ======================
+  #  Build & Push Docker Images
+  # ======================
   build-and-push:
     name: Build & Push Images
     needs: ci
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
@@ -62,19 +65,23 @@ jobs:
 
       - name: Build & Push Frontend
         run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} ./src
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} ./Frontend
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
 
-# ======================
-#  DEPLOYMENT
-# ======================
+      - name: Cleanup Docker
+        run: docker system prune -af
+
+  # ======================
+  #  Deployment
+  # ======================
   deploy:
     name: Continuous Deployment
     needs: build-and-push
     runs-on: self-hosted
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
@@ -88,13 +95,10 @@ jobs:
 
       - name: Pull Latest Images
         run: |
-          docker pull ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ env.BACKEND_REPO }}:latest
-          docker pull ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ env.FRONTEND_REPO }}:latest
+          docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:latest
+          docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:latest
 
-      - name: Deploy
+      - name: Deploy with Docker Compose
         run: |
           docker-compose -f docker-compose.prod.yml down
           docker-compose -f docker-compose.prod.yml up -d
-
-      - name: Cleanup
-        run: docker system prune -af
