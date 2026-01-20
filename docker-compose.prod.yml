@@ -1,6 +1,7 @@
 services:
   backend:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_BACKEND_REPO}:${IMAGE_TAG}
+    container_name: dietplanner-backend
     ports:
       - "8000:8000"
     restart: always
@@ -10,6 +11,7 @@ services:
 
   frontend:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_FRONTEND_REPO}:${IMAGE_TAG}
+    container_name: dietplanner-frontend
     ports:
       - "80:5173"
     depends_on:
