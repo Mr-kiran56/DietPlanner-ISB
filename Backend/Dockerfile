@@ -21,10 +21,10 @@ RUN pip install --upgrade pip
 # Copy backend code and requirements
 COPY requirements.txt .
 COPY Backend/ ./Backend
-COPY short_answer_rag ./short_answer_rag
+# COPY short_answer_rag ./short_answer_rag
 
-# Replace editable path in requirements
-RUN sed -i 's#-e b:\\users\\kiran\\downloads2\\short_answer_rag#-e ./short_answer_rag#g' requirements.txt
+# # Replace editable path in requirements
+# RUN sed -i 's#-e b:\\users\\kiran\\downloads2\\short_answer_rag#-e ./short_answer_rag#g' requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
