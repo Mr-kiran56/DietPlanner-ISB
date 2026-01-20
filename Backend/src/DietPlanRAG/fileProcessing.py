@@ -41,7 +41,7 @@ def file_process(file_path: str):
     # STEP 1: BIG CHUNKS (document-level grouping)
     # ------------------------------------------------
     big_splitter = TokenTextSplitter(
-        chunk_size=2000,     # was 10000 ❌
+        chunk_size=2000,     
         chunk_overlap=100
     )
     big_chunks = big_splitter.split_text(text_overall)
@@ -53,8 +53,8 @@ def file_process(file_path: str):
     # STEP 2: FINAL CHUNKS (EMBEDDING SAFE)
     # ------------------------------------------------
     small_splitter = TokenTextSplitter(
-        chunk_size=300,      # ✅ SAFE
-        chunk_overlap=50     # ✅ SAFE
+        chunk_size=300,      
+        chunk_overlap=50     
     )
     final_chunks = small_splitter.split_documents(documents)
     print(f"Created {len(final_chunks)} final chunks")

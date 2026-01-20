@@ -7,21 +7,14 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import re
 import torch.nn.functional as F
 
-# -------------------------------------------------
-# 🔴 CRITICAL WINDOWS MEMORY FIX
-# -------------------------------------------------
+
 # Disable HuggingFace memory-mapped loading
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 os.environ["HF_HUB_DISABLE_MEMORY_MAPPING"] = "1"
 
-# -------------------------------------------------
-# DEVICE
-# -------------------------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# -------------------------------------------------
-# PATHS
-# -------------------------------------------------
+
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = BASE_DIR / "IntentLLM-F" / "export" / "results" / "checkpoint-500"
 LABEL_ENCODER_PATH = BASE_DIR / "label_encoder.pkl"
@@ -42,8 +35,8 @@ tokenizer = AutoTokenizer.from_pretrained(
 # -------------------------------------------------
 model = AutoModelForSequenceClassification.from_pretrained(
     str(MODEL_PATH),
-    torch_dtype=torch.float32,   # ⬅ avoid fp16 mmap issues
-    low_cpu_mem_usage=True       # ⬅ VERY IMPORTANT
+    torch_dtype=torch.float32,   
+    low_cpu_mem_usage=True       
 )
 
 model.to(device)
@@ -101,7 +94,7 @@ def predict_intent(sentence: str):
     pred_id = int(torch.argmax(probs, dim=1).item())
     confidence = float(probs[0, pred_id].item())
 
-    # 🛡️ ABSOLUTE SAFETY (NO CRASH)
+    
     if pred_id >= NUM_ENCODER_CLASSES:
         return "unknown", round(confidence, 4)
 

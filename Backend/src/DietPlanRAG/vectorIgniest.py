@@ -16,10 +16,10 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 
 if not PINECONE_API_KEY:
-    raise RuntimeError("❌ PINECONE_API_KEY not loaded")
+    raise RuntimeError("PINECONE_API_KEY not loaded")
 
 if not NVIDIA_API_KEY:
-    raise RuntimeError("❌ NVIDIA_API_KEY not loaded")
+    raise RuntimeError("NVIDIA_API_KEY not loaded")
 
 # ================= CONFIG =================
 INDEX_NAME = "diet-plan"
@@ -45,10 +45,10 @@ def ensure_index_exists(pc: Pinecone):
     existing_indexes = [idx["name"] for idx in pc.list_indexes()]
 
     if INDEX_NAME in existing_indexes:
-        print(f"✅ Pinecone index '{INDEX_NAME}' already exists")
+        print(f" Pinecone index '{INDEX_NAME}' already exists")
         return
 
-    print(f"⚠️ Pinecone index '{INDEX_NAME}' not found. Creating...")
+    print(f" Pinecone index '{INDEX_NAME}' not found. Creating...")
 
     pc.create_index(
         name=INDEX_NAME,
@@ -60,7 +60,7 @@ def ensure_index_exists(pc: Pinecone):
         )
     )
 
-    print(f"✅ Pinecone index '{INDEX_NAME}' created")
+    print(f" Pinecone index '{INDEX_NAME}' created")
 
 
 # ================= INGESTION =================
@@ -77,9 +77,9 @@ def ingest_in_batches(docs, vectorstore):
                 vectorstore.add_documents(batch)
                 break
             except requests.exceptions.ConnectionError as e:
-                print(f"⚠️ Connection error (attempt {attempt}/{MAX_RETRIES})")
+                print(f"Connection error (attempt {attempt}/{MAX_RETRIES})")
                 if attempt == MAX_RETRIES:
-                    raise RuntimeError("❌ NVIDIA embedding failed repeatedly") from e
+                    raise RuntimeError("NVIDIA embedding failed repeatedly") from e
                 time.sleep(RETRY_SLEEP)
 
         batch_no += 1
@@ -100,11 +100,11 @@ def ingest_documents(document_chunks, filename: str):
     # -------- DVC SAFE SKIP --------
     stats = index.describe_index_stats()
     if namespace in stats.get("namespaces", {}):
-        print(f"✅ Namespace '{namespace}' already exists. Skipping ingestion.")
+        print(f"Namespace '{namespace}' already exists. Skipping ingestion.")
         write_dvc_marker("Vector ingestion skipped (already exists).")
         return
 
-    print(f"🚀 Starting ingestion for namespace: {namespace}")
+    print(f"Starting ingestion for namespace: {namespace}")
 
     vectorstore = PineconeVectorStore(
         index=index,
@@ -114,7 +114,7 @@ def ingest_documents(document_chunks, filename: str):
 
     ingest_in_batches(document_chunks, vectorstore)
 
-    print(f"✅ Documents ingested into namespace: {namespace}")
+    print(f" Documents ingested into namespace: {namespace}")
 
     write_dvc_marker("Vector ingestion completed successfully.")
 

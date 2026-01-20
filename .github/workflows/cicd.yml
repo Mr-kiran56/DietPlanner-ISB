@@ -1,0 +1,100 @@
+name: DietPlanner Full CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  BACKEND_REPO: dietplanner-backend
+  FRONTEND_REPO: dietplanner-frontend
+  IMAGE_TAG: latest
+
+#ci
+
+jobs:
+  ci:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Lint
+        run: echo "Linting code"
+
+      - name: Tests
+        run: echo "Running tests"
+
+# ======================
+#  BUILD & PUSH
+# ======================
+  build-and-push:
+    name: Build & Push Images
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & Push Backend
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} ./Backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
+
+      - name: Build & Push Frontend
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} ./src
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
+
+# ======================
+#  DEPLOYMENT
+# ======================
+  deploy:
+    name: Continuous Deployment
+    needs: build-and-push
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Pull Latest Images
+        run: |
+          docker pull ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ env.BACKEND_REPO }}:latest
+          docker pull ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ env.FRONTEND_REPO }}:latest
+
+      - name: Deploy
+        run: |
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml up -d
+
+      - name: Cleanup
+        run: docker system prune -af

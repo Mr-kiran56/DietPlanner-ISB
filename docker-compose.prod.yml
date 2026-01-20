@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  backend:
+    image: ${AWS_ECR_LOGIN_URI}/dietplanner-backend:latest
+    ports:
+      - "8000:8000"
+    restart: always
+    environment:
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      PINECONE_API_KEY: ${PINECONE_API_KEY}
+
+  frontend:
+    image: ${AWS_ECR_LOGIN_URI}/dietplanner-frontend:latest
+    ports:
+      - "80:5173"
+    depends_on:
+      - backend
+    restart: always

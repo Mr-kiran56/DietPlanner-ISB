@@ -5,9 +5,9 @@ from .vectorRetriever import get_retriever
 
 
 def generate_diet(
-    context: str,           # ← Add this
-    payload: dict,          # ← Rename from user_payload
-    days: int               # ← Add this
+    context: str,           
+    payload: dict,          
+    days: int             
 ):
     """
     Generate diet plan from context and payload.
