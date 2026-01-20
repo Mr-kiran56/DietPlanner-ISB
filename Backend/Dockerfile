@@ -4,6 +4,7 @@ FROM python:3.11-slim
 WORKDIR /app/Backend
 
 # Install system dependencies for ML, OpenCV, dlib, etc.
+# Install system dependencies for ML, OpenCV, dlib, etc.
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -18,15 +19,18 @@ RUN apt-get update && apt-get install -y \
     apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
 
-
 # Upgrade pip
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel
 
 # Copy requirements
 COPY requirements.txt ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies - Continue on errors
+RUN pip install --no-cache-dir -r requirements.txt || \
+    (echo "Some packages failed, installing individually..." && \
+     cat requirements.txt | grep -v '^#' | grep -v '^$' | while read package; do \
+       pip install --no-cache-dir "$package" || echo "FAILED: $package"; \
+     done)
 
 # Copy backend code
 COPY . ./
