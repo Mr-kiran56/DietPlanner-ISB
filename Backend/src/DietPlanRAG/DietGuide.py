@@ -348,11 +348,11 @@ def get_labels():
         "count": len(labels)
     }
 
-# ---------- RUN ----------
-if __name__ == "__main__":
-    uvicorn.run(
-        "DietPlanRAG.DietGuide:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True
-    )
+# # ---------- RUN ----------
+# if __name__ == "__main__":
+#     uvicorn.run(
+#         "DietPlanRAG.DietGuide:app",
+#         host="127.0.0.1",
+#         port=8000,
+#         reload=True
+#     )
