@@ -13,8 +13,8 @@ permissions:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  BACKEND_REPO: dietplanner-backend
-  FRONTEND_REPO: dietplanner-frontend
+  BACKEND_REPO: ${{ secrets.ECR_BACKEND_REPO }}
+  FRONTEND_REPO: ${{ secrets.ECR_FRONTEND_REPO }}
   IMAGE_TAG: latest
 
 jobs:
@@ -91,6 +91,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Pull Latest Images

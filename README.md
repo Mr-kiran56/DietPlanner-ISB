@@ -18,3 +18,4 @@ If you are developing a production application, we recommend using TypeScript wi
 
 
 856221042415.dkr.ecr.ap-southeast-2.amazonaws.com/medical-diet
+856221042415.dkr.ecr.ap-southeast-2.amazonaws.com/medical-diet
