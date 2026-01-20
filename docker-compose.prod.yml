@@ -1,19 +1,36 @@
-version: "3.9"
+deploy:
+  name: Continuous Deployment
+  needs: build-and-push
+  runs-on: self-hosted
 
-services:
-  backend:
-    image: ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}
-    ports:
-      - "8000:8000"
-    restart: always
-    environment:
-      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
-      PINECONE_API_KEY: ${PINECONE_API_KEY}
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
 
-  frontend:
-    image: ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}
-    ports:
-      - "80:5173"
-    depends_on:
-      - backend
-    restart: always
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Pull Latest Images
+      run: |
+        docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:latest
+        docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:latest
+
+    - name: Deploy with Docker Compose
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_BACKEND_REPO: ${{ secrets.ECR_BACKEND_REPO }}
+        ECR_FRONTEND_REPO: ${{ secrets.ECR_FRONTEND_REPO }}
+        IMAGE_TAG: latest
+        NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+      run: |
+        docker-compose -f docker-compose.prod.yml down
+        docker-compose -f docker-compose.prod.yml up -d
