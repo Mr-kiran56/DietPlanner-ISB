@@ -17,5 +17,4 @@ COPY . .
 
 EXPOSE 8000
 
-# This works like your local command
-CMD ["python", "-m", "uvicorn", "Backend.src.DietPlanRAG.DietGuide:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "src.DietPlanRAG.DietGuide:app", "--host", "0.0.0.0", "--port", "8000"]
