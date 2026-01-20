@@ -1,10 +1,9 @@
 # Base image
-FROM python:3.10-slim
+FROM python:3.11-slim
 
-# Set working directory inside container
 WORKDIR /app/Backend
 
-# Install system dependencies needed for ML, OpenCV, dlib, etc.
+# Install system dependencies for ML, OpenCV, dlib, etc.
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -15,17 +14,28 @@ RUN apt-get update && apt-get install -y \
     poppler-utils \
     python3-dev \
     git \
+    wget \
+    apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip to latest
+# Install .NET SDK (required dotnet)
+RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
+    && dpkg -i packages-microsoft-prod.deb \
+    && apt-get update \
+    && apt-get install -y dotnet-sdk-7.0 \
+    && rm packages-microsoft-prod.deb
+
+# Upgrade pip
 RUN pip install --upgrade pip
 
-# Copy requirements.txt and backend code
+# Copy requirements
 COPY requirements.txt ./
-COPY . ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend code
+COPY . ./
 
 # Expose FastAPI port
 EXPOSE 8000
