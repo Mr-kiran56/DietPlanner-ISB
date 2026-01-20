@@ -11,16 +11,21 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender-dev \
+    libgomp1 \
+    libopenblas-dev \
+    liblapack-dev \
     poppler-utils \
     python3-dev \
     git \
     wget \
     apt-transport-https \
+    tesseract-ocr \
+    libgl1-mesa-glx \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-
 # Upgrade pip
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel
 
 # Copy requirements
 COPY requirements.txt ./
