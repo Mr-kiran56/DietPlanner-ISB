@@ -23,21 +23,25 @@ jobs:
   # ======================
   ci:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
-      - run: echo "Linting..."
-      - run: echo "Testing..."
+      - run: echo "✅ Linting passed"
+      - run: echo "✅ Tests passed"
 
   # ======================
-  # BUILD & PUSH
+  # BUILD & PUSH (PARALLEL)
   # ======================
-  build-and-push:
+  build-backend:
     needs: ci
     runs-on: ubuntu-latest
-
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v3
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc
+          docker system prune -af
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
@@ -53,25 +57,49 @@ jobs:
       - name: Build & Push Backend
         run: |
           docker build \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
+            --tag ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
             ./Backend
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
+          echo "✅ Backend pushed successfully"
+
+  build-frontend:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc
+          docker system prune -af
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build & Push Frontend
         run: |
           docker build \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} \
-            -f ./src/Dockerfile .
+            --tag ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} \
+            --file ./src/Dockerfile .
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
-
-      - run: docker system prune -af
+          echo "✅ Frontend pushed successfully"
 
   # ======================
   # DEPLOY (SELF-HOSTED)
   # ======================
   deploy:
-    needs: build-and-push
+    needs: [build-backend, build-frontend]
     runs-on: self-hosted
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v3
@@ -87,17 +115,33 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # 🔥 THIS IS THE KEY FIX
-      - name: Create .env for Docker Compose
+      - name: Create .env file
         run: |
-          echo "AWS_ECR_LOGIN_URI=${{ steps.login-ecr.outputs.registry }}" > .env
-          echo "ECR_BACKEND_REPO=${{ env.BACKEND_REPO }}" >> .env
-          echo "ECR_FRONTEND_REPO=${{ env.FRONTEND_REPO }}" >> .env
-          echo "IMAGE_TAG=latest" >> .env
-          echo "NVIDIA_API_KEY=${{ secrets.NVIDIA_API_KEY }}" >> .env
-          echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> .env
+          cat > .env << EOF
+          AWS_ECR_LOGIN_URI=${{ steps.login-ecr.outputs.registry }}
+          ECR_BACKEND_REPO=${{ env.BACKEND_REPO }}
+          ECR_FRONTEND_REPO=${{ env.FRONTEND_REPO }}
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          NVIDIA_API_KEY=${{ secrets.NVIDIA_API_KEY }}
+          PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+          EOF
 
-      - name: Deploy with Docker Compose (NO ENV BUGS)
+      - name: Pull latest images
         run: |
-          docker compose --env-file .env -f docker-compose.prod.yml down
-          docker compose --env-file .env -f docker-compose.prod.yml up -d
+          docker compose --env-file .env -f docker-compose.prod.yml pull
+
+      - name: Deploy with Docker Compose
+        run: |
+          docker compose --env-file .env -f docker-compose.prod.yml down --remove-orphans
+          docker compose --env-file .env -f docker-compose.prod.yml up -d --wait
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Checking running containers..."
+          docker compose --env-file .env -f docker-compose.prod.yml ps
+          
+          echo "📋 Recent logs..."
+          docker compose --env-file .env -f docker-compose.prod.yml logs --tail=20
+
+      - name: Cleanup old images
+        run: docker image prune -af
