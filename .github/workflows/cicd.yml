@@ -38,6 +38,24 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Check Docker Health & Restart if Needed
+        run: |
+          echo "Checking Docker daemon..."
+          if ! docker info > /dev/null 2>&1; then
+            echo "Docker daemon not responding, restarting..."
+            sudo systemctl restart docker
+            sleep 5
+          fi
+          docker info
+          df -h
+          free -h
+
+      - name: Cleanup stale resources
+        run: |
+          docker system prune -f
+          # Kill any hanging build processes
+          sudo pkill -9 -f "docker build" || true
+
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -50,11 +68,20 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build & Push Frontend
+        timeout-minutes: 10
         run: |
+          set -e
+          echo "Building frontend..."
           docker build \
+            --no-cache \
+            --progress=plain \
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} \
             -f ./src/Dockerfile .
+          
+          echo "Pushing to ECR..."
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
+          
+          echo "✅ Frontend build complete"
 
       - name: Cleanup
         if: always()
@@ -70,6 +97,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: Check Docker Health
+        run: |
+          docker info
+          df -h
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
