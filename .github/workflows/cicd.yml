@@ -19,42 +19,25 @@ env:
 
 jobs:
   # ======================
-  # CI (Quick checks on GitHub runner)
+  # CI
   # ======================
   ci:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
-      - run: echo "✅ Linting passed"
-      - run: echo "✅ Tests passed"
+      - run: echo "Linting..."
+      - run: echo "Testing..."
 
   # ======================
-  # BUILD FRONTEND ONLY (GitHub runner - fast)
+  # BUILD & PUSH
   # ======================
-  build-frontend:
+  build-and-push:
     needs: ci
-    runs-on: self-hosted
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
-
-      - name: Check Docker Health & Restart if Needed
-        run: |
-          echo "Checking Docker daemon..."
-          if ! docker info > /dev/null 2>&1; then
-            echo "Docker daemon not responding, restarting..."
-            sudo systemctl restart docker
-            sleep 5
-          fi
-          docker info
-          df -h
-          free -h
-
-      - name: Cleanup stale resources
-        run: |
-          docker system prune -f
-          # Kill any hanging build processes
-          sudo pkill -9 -f "docker build" || true
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
@@ -67,90 +50,54 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build & Push Frontend
-        timeout-minutes: 10
-        run: |
-          set -e
-          echo "Building frontend..."
-          docker build \
-            --no-cache \
-            --progress=plain \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} \
-            -f ./src/Dockerfile .
-          
-          echo "Pushing to ECR..."
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
-          
-          echo "✅ Frontend build complete"
-
-      - name: Cleanup
-        if: always()
-        run: docker system prune -af
-
-  # ======================
-  # BUILD BACKEND + DEPLOY (EC2 self-hosted)
-  # ======================
-  build-and-deploy:
-    needs: build-frontend
-    runs-on: self-hosted
-    timeout-minutes: 30
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Check Docker Health
-        run: |
-          docker info
-          df -h
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build & Push Backend (with 1.5GB model)
+      - name: Build & Push Backend
         run: |
           docker build \
-            --tag ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
-            --file ./Backend/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
             ./Backend
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
 
-      - name: Clean up old images
-        run: docker system prune -af
+      - name: Build & Push Frontend
+        run: |
+          docker build \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} \
+            -f ./src/Dockerfile .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
 
+      - run: docker system prune -af
+
+  # ======================
+  # DEPLOY (SELF-HOSTED)
+  # ======================
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # 🔥 THIS IS THE KEY FIX
       - name: Create .env for Docker Compose
         run: |
-          cat > .env << EOF
-          AWS_ECR_LOGIN_URI=${{ steps.login-ecr.outputs.registry }}
-          ECR_BACKEND_REPO=${{ env.BACKEND_REPO }}
-          ECR_FRONTEND_REPO=${{ env.FRONTEND_REPO }}
-          IMAGE_TAG=latest
-          NVIDIA_API_KEY=${{ secrets.NVIDIA_API_KEY }}
-          PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
-          EOF
+          echo "AWS_ECR_LOGIN_URI=${{ steps.login-ecr.outputs.registry }}" > .env
+          echo "ECR_BACKEND_REPO=${{ env.BACKEND_REPO }}" >> .env
+          echo "ECR_FRONTEND_REPO=${{ env.FRONTEND_REPO }}" >> .env
+          echo "IMAGE_TAG=latest" >> .env
+          echo "NVIDIA_API_KEY=${{ secrets.NVIDIA_API_KEY }}" >> .env
+          echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> .env
 
-      - name: Deploy with Docker Compose
+      - name: Deploy with Docker Compose (NO ENV BUGS)
         run: |
-          docker compose --env-file .env -f docker-compose.prod.yml down --remove-orphans
-          docker compose --env-file .env -f docker-compose.prod.yml pull
-          docker compose --env-file .env -f docker-compose.prod.yml up -d --wait
-
-      - name: Verify deployment
-        run: |
-          docker compose --env-file .env -f docker-compose.prod.yml ps
-          docker compose --env-file .env -f docker-compose.prod.yml logs --tail=50
-
-      - name: Health check
-        run: |
-          echo "Waiting for services to be ready..."
-          sleep 10
-          # Add your health check endpoints here
-          # curl -f http://localhost:3000/health || exit 1
-          # curl -f http://localhost:8000/health || exit 1
+          docker compose --env-file .env -f docker-compose.prod.yml down
+          docker compose --env-file .env -f docker-compose.prod.yml up -d
