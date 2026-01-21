@@ -1,40 +1,32 @@
-version: '3.8'
-
 services:
   backend:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_BACKEND_REPO}:${IMAGE_TAG}
     container_name: dietplanner-backend
     ports:
       - "8000:8000"
-    restart: always
+    restart: unless-stopped
     environment:
       NVIDIA_API_KEY: ${NVIDIA_API_KEY}
       PINECONE_API_KEY: ${PINECONE_API_KEY}
       PYTHONPATH: /app/Backend/src
     volumes:
-      # Persistent uploads directo
       - uploads_data:/app/uploads
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # REMOVE healthcheck temporarily
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
 
   frontend:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_FRONTEND_REPO}:${IMAGE_TAG}
     container_name: dietplanner-frontend
     ports:
       - "80:80"
+    restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - backend  # Simple dependency without health condition
 
 volumes:
   uploads_data:

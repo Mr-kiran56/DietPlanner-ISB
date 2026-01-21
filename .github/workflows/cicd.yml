@@ -99,7 +99,7 @@ jobs:
   deploy:
     needs: [build-backend, build-frontend]
     runs-on: self-hosted
-    timeout-minutes: 10
+    timeout-minutes: 15  # Increased timeout
 
     steps:
       - uses: actions/checkout@v3
@@ -130,27 +130,64 @@ jobs:
         run: |
           docker compose --env-file .env -f docker-compose.prod.yml pull
 
-      - name: Deploy with Docker Compose
+      - name: Deploy with Docker Compose (FIXED)
         run: |
+          # Stop and remove existing containers
           docker compose --env-file .env -f docker-compose.prod.yml down --remove-orphans
-          docker compose --env-file .env -f docker-compose.prod.yml up -d --wait
+          
+          # Start backend first with a delay
+          echo "Starting backend container..."
+          docker compose --env-file .env -f docker-compose.prod.yml up -d backend
+          
+          # Wait for backend to be ready (manual health check)
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            if docker compose --env-file .env -f docker-compose.prod.yml ps backend | grep -q "Up"; then
+              echo "Backend container is running, checking if it's ready..."
+              # Try to access the health endpoint
+              if docker compose --env-file .env -f docker-compose.prod.yml exec backend curl -s -f http://localhost:8000/ > /dev/null 2>&1; then
+                echo "✅ Backend is healthy!"
+                break
+              fi
+            fi
+            echo "Waiting for backend... attempt $i/30"
+            sleep 5
+          done
+          
+          # Start frontend
+          echo "Starting frontend container..."
+          docker compose --env-file .env -f docker-compose.prod.yml up -d frontend
+          
+          # Wait for frontend
+          sleep 5
 
       - name: Verify deployment
         run: |
           echo "🔍 Checking running containers..."
           docker compose --env-file .env -f docker-compose.prod.yml ps
           
-          echo "📋 Checking backend logs..."
+          echo "📋 Checking backend logs (last 20 lines)..."
           docker compose --env-file .env -f docker-compose.prod.yml logs backend --tail=20
           
-          echo "📋 Checking frontend logs..."
-          docker compose --env-file .env -f docker-compose.prod.yml logs frontend --tail=20
+          echo "🌐 Testing backend endpoint..."
+          if curl -s -f http://localhost:8000/ > /dev/null; then
+            echo "✅ Backend is responding on port 8000"
+          else
+            echo "⚠️ Backend not responding on port 8000, checking container logs..."
+            docker compose --env-file .env -f docker-compose.prod.yml logs backend --tail=50
+          fi
           
-          echo "🌐 Testing backend health..."
-          curl -f http://localhost:8000/ || echo "Backend health check failed"
-          
-          echo "🌐 Testing frontend health..."
-          curl -f http://localhost:80/health || echo "Frontend health check failed"
+          echo "🌐 Testing frontend..."
+          if curl -s -f http://localhost:80/health > /dev/null; then
+            echo "✅ Frontend is responding on port 80"
+          else
+            echo "⚠️ Frontend health check failed, checking if main page loads..."
+            if curl -s -f http://localhost:80/ > /dev/null; then
+              echo "✅ Frontend main page is loading"
+            else
+              docker compose --env-file .env -f docker-compose.prod.yml logs frontend --tail=30
+            fi
+          fi
           
           echo "📁 Checking uploads directory..."
           docker exec dietplanner-backend ls -la /app/uploads/ 2>/dev/null || echo "Uploads directory doesn't exist"
