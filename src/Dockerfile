@@ -9,7 +9,7 @@ COPY package*.json ./
 # Install dependencies and clear cache
 RUN npm cache clean --force && npm ci
 
-# Copy all source files
+# Copy all source file
 COPY . .
 
 # Build with npx to avoid permission issues
