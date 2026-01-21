@@ -9,11 +9,11 @@ COPY package*.json ./
 # Install dependencies and clear cache
 RUN npm cache clean --force && npm ci
 
-# Copy all source file
+# Copy all source files
 COPY . .
 
-# Build with npx to avoid permission issues
-RUN npx vite build
+# Ensure proper permissions and build
+RUN npm run build
 
 # Production stage
 FROM nginx:alpine
