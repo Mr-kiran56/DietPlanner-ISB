@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# Install ALL dependencies (including devDependencies) for build
+# Install ALL dependencies (including devDependencies) for buil
 RUN npm ci
 
 COPY . .
