@@ -1,22 +1,23 @@
 # Build stage - Use Node 20
 FROM node:20-alpine AS builder
 
-# Create app directory with proper permissions
-RUN mkdir -p /app && chown -R node:node /app
 WORKDIR /app
-USER node
 
 # Copy package files
-COPY --chown=node:node package*.json ./
+COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies and vite globally
+RUN npm cache clean --force && \
+    npm install && \
+    npm install -g vite @vitejs/plugin-react
 
 # Copy all source files
-COPY --chown=node:node . .
+COPY . .
 
-# Build the project
-RUN npm run build
+# Verify installation and build
+RUN which vite && \
+    ls -la node_modules/.bin/ && \
+    npm run build
 
 # Production stage
 FROM nginx:alpine
