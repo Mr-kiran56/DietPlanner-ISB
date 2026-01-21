@@ -9,15 +9,16 @@ import traceback
 import logging
 import shutil
 from typing import Optional, List, Dict, Any
+import os
+import aiofiles
 
 # ---------- PROJECT ROOT ----------
-# This file should be at: DietPlanner/Backend/src/DietPlanRAG/DietGuide.py
-# So we go up to get to DietPlanner root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 # ---------- UPLOAD DIRECTORY ----------
-UPLOAD_DIR = PROJECT_ROOT / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
+# Use absolute path in container
+UPLOAD_DIR = Path("/app/uploads")
+UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
 
 # ---------- LOGGING CONFIGURATION ----------
 logging.basicConfig(level=logging.INFO)
@@ -48,13 +49,14 @@ load_dotenv()
 # ---------- APP ----------
 app = FastAPI(
     title="Diet Planner ML API",
-    description="API for personalized diet planning based on medical reports"
+    description="API for personalized diet planning based on medical reports",
+    version="1.0.0"
 )
 
 # ---------- CORS MIDDLEWARE ----------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # React dev server
+    allow_origins=["*"],  # Allow all origins in production, or specify frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,7 +68,6 @@ class PredictionRequest(BaseModel):
     food_type: Optional[str] = "veg"
     budget: Optional[str] = "medium"
     days: Optional[int] = 7
-    
 
 class MLPrediction(BaseModel):
     predicted_disease: str
@@ -85,6 +86,7 @@ class UploadResponse(BaseModel):
     message: str
     file_path: str
     filename: str
+    file_size: int
 
 # ---------- DISEASE LABELS ----------
 labels = [
@@ -110,7 +112,12 @@ def load_model(model_path: Path):
         return pickle.load(f)
 
 MODEL_PATH = PROJECT_ROOT / "models/xgboost_medical_model.pkl"
-model = load_model(MODEL_PATH)
+try:
+    model = load_model(MODEL_PATH)
+    logger.info(f"Model loaded successfully from {MODEL_PATH}")
+except Exception as e:
+    logger.error(f"Failed to load model: {e}")
+    model = None
 
 # ---------- FILE UPLOAD ENDPOINT ----------
 @app.post("/upload", response_model=UploadResponse)
@@ -131,24 +138,30 @@ async def upload_file(file: UploadFile = File(...)):
             )
         
         # Create unique filename to avoid conflicts
+        import uuid
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_filename = f"{timestamp}_{file.filename}"
+        unique_id = str(uuid.uuid4())[:8]
+        safe_filename = f"{timestamp}_{unique_id}_{Path(file.filename).name}"
         file_path = UPLOAD_DIR / safe_filename
         
-        # Save file
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Save file asynchronously
+        async with aiofiles.open(file_path, 'wb') as buffer:
+            content = await file.read()
+            await buffer.write(content)
         
-        # Return relative path from project root
-        relative_path = file_path.relative_to(PROJECT_ROOT)
+        file_size = os.path.getsize(file_path)
         
-        logger.info(f"File uploaded successfully: {relative_path}")
+        # Return relative path (for API calls)
+        relative_path = f"uploads/{safe_filename}"
+        
+        logger.info(f"File uploaded successfully: {relative_path} ({file_size} bytes)")
         
         return UploadResponse(
             message="File uploaded successfully",
-            file_path=str(relative_path),
-            filename=file.filename
+            file_path=relative_path,
+            filename=file.filename,
+            file_size=file_size
         )
         
     except HTTPException:
@@ -161,7 +174,7 @@ async def upload_file(file: UploadFile = File(...)):
             detail=f"File upload failed: {str(e)}"
         )
 
-# ---------- GET PREDICTION (With Query Parameters) ----------
+# ---------- GET PREDICTION ----------
 @app.get("/ML/Predict")
 async def ml_prediction_get(
     file_path: str,
@@ -171,13 +184,6 @@ async def ml_prediction_get(
 ):
     """
     Generate diet plan based on uploaded medical report.
-    Accepts user preferences via query parameters.
-    
-    Parameters:
-    - file_path: Path to uploaded file
-    - food_type: "veg" or "nonveg" (default: "veg")
-    - budget: "low", "medium", or "high" (default: "medium")
-    - days: Number of days for diet plan (1-30, default: 7)
     """
     try:
         # Validate parameters
@@ -199,58 +205,59 @@ async def ml_prediction_get(
                 detail=f"Invalid days: {days}. Must be between 1 and 30"
             )
         
-        # ---------- RESOLVE FILE PATH ----------
-        full_path = (PROJECT_ROOT / file_path).resolve()
-
-        logger.info("======== DEBUG ========")
-        logger.info(f"PROJECT_ROOT : {PROJECT_ROOT}")
-        logger.info(f"INPUT PATH   : {file_path}")
-        logger.info(f"FULL PATH    : {full_path}")
-        logger.info(f"EXISTS       : {full_path.exists()}")
-        logger.info(f"PREFERENCES  : food_type={food_type}, budget={budget}, days={days}")
-        logger.info("=======================")
-
+        # Resolve file path
+        if file_path.startswith("uploads/"):
+            full_path = UPLOAD_DIR / Path(file_path).name
+        else:
+            full_path = Path(file_path)
+        
         if not full_path.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"File not found: {full_path}"
-            )
-
-        # ---------- DATA EXTRACTION ----------
+            # Try absolute path
+            full_path = UPLOAD_DIR / Path(file_path).name
+            if not full_path.exists():
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"File not found: {file_path}. Searched in: {UPLOAD_DIR}"
+                )
+        
+        logger.info("======== FILE DEBUG ========")
+        logger.info(f"Input file_path: {file_path}")
+        logger.info(f"Resolved path: {full_path}")
+        logger.info(f"Exists: {full_path.exists()}")
+        logger.info(f"File size: {full_path.stat().st_size if full_path.exists() else 'N/A'}")
+        logger.info("==========================")
+        
+        # Data extraction
         logger.info("Starting data extraction...")
         dataDF, text = DataExtraction(str(full_path))
         dataDF = dataDF.replace({None: np.nan}).infer_objects(copy=False)
-
-        # ---------- PREPROCESS ----------
+        
+        # Preprocess
         logger.info("Preprocessing data...")
         dataDF = preprocess_data(dataDF)
         final_data = Preprocess_data(dataDF)
-
-        logger.info(f"final_data TYPE: {type(final_data)}")
-        logger.info(f"final_data shape: {final_data.shape}")
-
-        # ---------- ML PREDICTION ----------
+        
+        # ML prediction
         logger.info("Running ML prediction...")
+        if model is None:
+            raise HTTPException(status_code=500, detail="ML model not loaded")
         
         first_row = final_data.iloc[0]
         X = first_row.tolist()
         input_data = np.array(X).reshape(1, -1)
-
-        logger.info(f"input_data shape: {input_data.shape}")
-
+        
         probs = model.predict_proba(input_data)
-
         pred_index = int(np.argmax(probs))
         predicted_disease = labels[pred_index]
         confidence = round(float(probs[0][pred_index]), 4)
-
+        
         logger.info(f"Prediction: {predicted_disease} (confidence: {confidence})")
-
-        # ---------- INTENT EXTRACTION ----------
+        
+        # Intent extraction
         logger.info("Extracting intents...")
         sentences = split_sentences(text)
         detected_intents = []
-
+        
         for s in sentences:
             intent, conf = predict_intent(s)
             if conf >= 0.7:
@@ -259,10 +266,10 @@ async def ml_prediction_get(
                     "intent": intent,
                     "confidence": round(conf, 4)
                 })
-
+        
         logger.info(f"Detected {len(detected_intents)} intents")
-
-        # ---------- USER PAYLOAD WITH PREFERENCES ----------
+        
+        # User payload
         user_payload = {
             "patient_profile": dataDF.iloc[0].to_dict(),
             "ml_prediction": {
@@ -276,44 +283,40 @@ async def ml_prediction_get(
                 "days": days
             }
         }
-
-        # ---------- LLM GENERATION ----------
-        logger.info(f"Generating {days}-day diet plan with preferences: {food_type}, {budget}...")
+        
+        # LLM generation
+        logger.info(f"Generating {days}-day diet plan...")
         diet_response = generate_diet(
             context=text,
             payload=user_payload,
             days=days
         )
-
+        
         logger.info("Diet plan generated successfully")
-
-        return PredictionResponse(
-            ml_prediction=MLPrediction(
-                predicted_disease=predicted_disease,
-                confidence=confidence
-            ),
-            diet_plan=diet_response
-        )
-
+        
+        return {
+            "ml_prediction": {
+                "predicted_disease": predicted_disease,
+                "confidence": confidence
+            },
+            "diet_plan": diet_response
+        }
+        
     except HTTPException:
         raise
     except FileNotFoundError as e:
         logger.error(f"File not found: {str(e)}")
         raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
-    except ValueError as e:
-        logger.error(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-# ---------- ML PREDICTION ENDPOINT (POST) ----------
-@app.post("/ML/Predict", response_model=PredictionResponse)
+# ---------- POST PREDICTION ----------
+@app.post("/ML/Predict")
 async def ml_prediction(request: PredictionRequest):
     """
     POST endpoint for diet plan generation.
-    Redirects to GET endpoint with extracted parameters.
     """
     return await ml_prediction_get(
         file_path=request.file_path,
@@ -324,34 +327,52 @@ async def ml_prediction(request: PredictionRequest):
 
 # ---------- HEALTH CHECK ----------
 @app.get("/")
-def health_check():
+async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
         "message": "Diet Planner ML API is running",
-        "model_loaded": MODEL_PATH.exists(),
+        "version": "1.0.0",
+        "model_loaded": model is not None,
         "upload_dir": str(UPLOAD_DIR),
+        "upload_dir_exists": UPLOAD_DIR.exists(),
+        "upload_dir_files": len(list(UPLOAD_DIR.glob("*"))) if UPLOAD_DIR.exists() else 0,
         "endpoints": {
             "upload": "POST /upload",
-            "predict": "GET /ML/Predict?file_path=<path>&food_type=<veg|nonveg>&budget=<low|medium|high>&days=<1-30>",
-            "health": "GET /"
+            "predict_get": "GET /ML/Predict?file_path=<path>&food_type=<veg|nonveg>&budget=<low|medium|high>&days=<1-30>",
+            "predict_post": "POST /ML/Predict",
+            "health": "GET /",
+            "labels": "GET /labels"
         }
     }
 
 # ---------- GET LABELS ----------
 @app.get("/labels")
-def get_labels():
+async def get_labels():
     """Get list of possible disease predictions."""
     return {
         "labels": labels,
         "count": len(labels)
     }
 
-# # ---------- RUN ----------
-# if __name__ == "__main__":
-#     uvicorn.run(
-#         "DietPlanRAG.DietGuide:app",
-#         host="127.0.0.1",
-#         port=8000,
-#         reload=True
-#     )
+# ---------- LIST UPLOADED FILES ----------
+@app.get("/uploads")
+async def list_uploads():
+    """List all uploaded files."""
+    files = []
+    for f in UPLOAD_DIR.glob("*"):
+        if f.is_file():
+            files.append({
+                "name": f.name,
+                "size": f.stat().st_size,
+                "modified": f.stat().st_mtime
+            })
+    return {"files": files}
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "DietGuide:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    )

@@ -18,9 +18,6 @@ env:
   IMAGE_TAG: latest
 
 jobs:
-  # ======================
-  # CI
-  # ======================
   ci:
     runs-on: self-hosted
     steps:
@@ -28,9 +25,6 @@ jobs:
       - run: echo "✅ Linting passed"
       - run: echo "✅ Tests passed"
 
-  # ======================
-  # BUILD & PUSH (PARALLEL)
-  # ======================
   build-backend:
     needs: ci
     runs-on: self-hosted
@@ -56,9 +50,14 @@ jobs:
 
       - name: Build & Push Backend
         run: |
+          echo "Building backend Docker image..."
           docker build \
-            --tag ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
-            ./Backend
+            --no-cache \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
+            -f Backend/Dockerfile \
+            .
+          
+          echo "Pushing backend image to ECR..."
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
           echo "✅ Backend pushed successfully"
 
@@ -82,10 +81,14 @@ jobs:
 
       - name: Build & Push Frontend
         run: |
+          echo "Building frontend Docker image..."
           docker build \
+            --no-cache \
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} \
-            -f ./src/Dockerfile \
+            -f src/Dockerfile \
             .
+          
+          echo "Pushing frontend image to ECR..."
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
           echo "✅ Frontend pushed successfully"
       
@@ -93,10 +96,6 @@ jobs:
         if: always()
         run: docker system prune -af
 
-
-  # ======================
-  # DEPLOY (SELF-HOSTED)
-  # ======================
   deploy:
     needs: [build-backend, build-frontend]
     runs-on: self-hosted
@@ -141,8 +140,20 @@ jobs:
           echo "🔍 Checking running containers..."
           docker compose --env-file .env -f docker-compose.prod.yml ps
           
-          echo " Recent logs..."
-          docker compose --env-file .env -f docker-compose.prod.yml logs --tail=20
+          echo "📋 Checking backend logs..."
+          docker compose --env-file .env -f docker-compose.prod.yml logs backend --tail=20
+          
+          echo "📋 Checking frontend logs..."
+          docker compose --env-file .env -f docker-compose.prod.yml logs frontend --tail=20
+          
+          echo "🌐 Testing backend health..."
+          curl -f http://localhost:8000/ || echo "Backend health check failed"
+          
+          echo "🌐 Testing frontend health..."
+          curl -f http://localhost:80/health || echo "Frontend health check failed"
+          
+          echo "📁 Checking uploads directory..."
+          docker exec dietplanner-backend ls -la /app/uploads/ 2>/dev/null || echo "Uploads directory doesn't exist"
 
       - name: Cleanup old images
         run: docker image prune -af

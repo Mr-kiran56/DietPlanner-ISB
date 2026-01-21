@@ -16,7 +16,17 @@ const DietPlanner = () => {
   const [error, setError] = useState(null);
   const [selectedDay, setSelectedDay] = useState('day_1');
 
- const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://127.0.0.1:8000';
+  // FIXED: Get API base URL correctly
+  const getApiBaseUrl = () => {
+    // In production (docker), use relative path with /api prefix
+    // In development, use localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://127.0.0.1:8000';
+    }
+    return '/api'; // Nginx will proxy to backend
+  };
+
+  const API_BASE_URL = getApiBaseUrl();
 
   // Parse the nested JSON structure from API response
   const parseDietPlan = (apiResponse) => {
@@ -50,19 +60,32 @@ const DietPlanner = () => {
       const formData = new FormData();
       formData.append('file', uploadedFile);
 
+      console.log('Uploading to:', `${API_BASE_URL}/upload`);
+      
       const uploadResponse = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
+        // Don't set Content-Type header for FormData
       });
 
       if (!uploadResponse.ok) {
-        throw new Error('File upload failed');
+        let errorMessage = 'File upload failed';
+        try {
+          const errorData = await uploadResponse.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch (e) {
+          errorMessage = `HTTP ${uploadResponse.status}: ${uploadResponse.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const uploadData = await uploadResponse.json();
+      console.log('Upload successful:', uploadData);
+      
       setUploadedFilePath(uploadData.file_path);
       setStep(2);
     } catch (err) {
+      console.error('Upload error:', err);
       setError(`Upload failed: ${err.message}`);
       setFile(null);
     } finally {
@@ -83,19 +106,29 @@ const DietPlanner = () => {
         days: preferences.days.toString()
       });
 
-      const response = await fetch(`${API_BASE_URL}/ML/Predict?${params}`, {
+      const url = `${API_BASE_URL}/ML/Predict?${params}`;
+      console.log('Generating diet plan with URL:', url);
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         }
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to generate diet plan');
+        let errorMessage = 'Failed to generate diet plan';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch (e) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('Generation successful:', data);
       
       // Parse the nested JSON structure
       const parsedPlan = parseDietPlan(data);
@@ -106,8 +139,8 @@ const DietPlanner = () => {
       });
       setStep(3);
     } catch (err) {
+      console.error('Generation error:', err);
       setError(`Generation failed: ${err.message}`);
-      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
@@ -151,6 +184,20 @@ const DietPlanner = () => {
     );
   };
 
+  // Add debug info in development
+  const renderDebugInfo = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return (
+        <div className="debug-info">
+          <p>API Base URL: {API_BASE_URL}</p>
+          <p>Uploaded File Path: {uploadedFilePath || 'None'}</p>
+          <p>Step: {step}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="app-container">
       <header className="header">
@@ -174,12 +221,18 @@ const DietPlanner = () => {
 
       <main className="main-content">
         <div className="container">
+          {/* Debug info for development */}
+          {renderDebugInfo()}
+          
           {error && (
             <div className="error-box">
               <div className="error-icon">⚠️</div>
               <div>
                 <p className="error-title">Error</p>
                 <p className="error-message">{error}</p>
+                {API_BASE_URL && (
+                  <p className="error-detail">API: {API_BASE_URL}</p>
+                )}
               </div>
             </div>
           )}

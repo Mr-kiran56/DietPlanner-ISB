@@ -12,16 +12,21 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install Python dependencies
-COPY requirements.txt .
+COPY Backend/requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir uvicorn[standard] fastapi && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY Backend/ ./Backend/
 
-# Set Python path AFTER copying files
-ENV PYTHONPATH=/app:$PYTHONPATH
+# Create uploads directory with proper permissions
+RUN mkdir -p /app/uploads && \
+    chmod -R 755 /app/uploads
+
+# Set Python path
+ENV PYTHONPATH=/app/Backend/src:$PYTHONPATH
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
