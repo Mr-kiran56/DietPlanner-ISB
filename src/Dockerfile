@@ -1,18 +1,21 @@
 # Build stage - Use Node 20
 FROM node:20-alpine AS builder
 
+# Create app directory with proper permissions
+RUN mkdir -p /app && chown -R node:node /app
 WORKDIR /app
+USER node
 
 # Copy package files
-COPY package*.json ./
+COPY --chown=node:node package*.json ./
 
-# Install dependencies and clear cache
-RUN npm cache clean --force && npm ci
+# Install dependencies
+RUN npm ci --only=production
 
 # Copy all source files
-COPY . .
+COPY --chown=node:node . .
 
-# Ensure proper permissions and build
+# Build the project
 RUN npm run build
 
 # Production stage
