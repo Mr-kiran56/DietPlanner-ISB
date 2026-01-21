@@ -141,7 +141,7 @@ jobs:
           echo "🔍 Checking running containers..."
           docker compose --env-file .env -f docker-compose.prod.yml ps
           
-          echo "📋 Recent logs..."
+          echo " Recent logs..."
           docker compose --env-file .env -f docker-compose.prod.yml logs --tail=20
 
       - name: Cleanup old images
