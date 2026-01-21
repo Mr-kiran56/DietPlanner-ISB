@@ -13,9 +13,7 @@ services:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_FRONTEND_REPO}:${IMAGE_TAG}
     container_name: dietplanner-frontend
     ports:
-      - "80:5173"
+      - "80:80"  # Changed from 80:5173
     depends_on:
       - backend
     restart: always
-
-

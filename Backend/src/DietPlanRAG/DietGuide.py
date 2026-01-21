@@ -48,14 +48,13 @@ load_dotenv()
 # ---------- APP ----------
 app = FastAPI(
     title="Diet Planner ML API",
-    description="API for personalized diet planning based on medical reports",
-    version="1.0.0"
+    description="API for personalized diet planning based on medical reports"
 )
 
 # ---------- CORS MIDDLEWARE ----------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000","http://localhost:5173", "http://127.0.0.1:3000"],  # React dev server
+    allow_origins=["*"],  # React dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
