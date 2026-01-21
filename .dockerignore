@@ -1,81 +1,81 @@
-taskkill /F /IM "Docker Desktop.exe"
-wsl --shutdown
-timeout /t 10
-start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-```
+# taskkill /F /IM "Docker Desktop.exe"
+# wsl --shutdown
+# timeout /t 10
+# start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+# ```
 
-Wait 3 minutes for Docker to fully start.
+# Wait 3 minutes for Docker to fully start.
 
----
+# ---
 
-## Step 2: Create `.dockerignore` File
+# ## Step 2: Create `.dockerignore` File
 
-**Location: `B:\PersonalDietPlan-Infosys\DietPlanner\Backend\.dockerignore`**
+# **Location: `B:\PersonalDietPlan-Infosys\DietPlanner\Backend\.dockerignore`**
 
-Create this file with this content:
-```
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-.venv
+# Create this file with this content:
+# ```
+# # Python
+# __pycache__/
+# *.py[cod]
+# *$py.class
+# *.so
+# .Python
+# env/
+# venv/
+# ENV/
+# .venv
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# # IDEs
+# .vscode/
+# .idea/
+# *.swp
+# *.swo
+# *~
 
-# OS
-.DS_Store
-Thumbs.db
-*.log
+# # OS
+# .DS_Store
+# Thumbs.db
+# *.log
 
-# Data files (HUGE - exclude these!)
-*.pkl
-*.pth
-*.h5
-*.hdf5
-*.csv
-*.xlsx
-*.json
-*.db
-*.sqlite
-*.parquet
+# # Data files (HUGE - exclude these!)
+# *.pkl
+# *.pth
+# *.h5
+# *.hdf5
+# *.csv
+# *.xlsx
+# *.json
+# *.db
+# *.sqlite
+# *.parquet
 
-# Models and datasets
-models/
-data/
-datasets/
-checkpoints/
-logs/
-wandb/
+# # Models and datasets
+# models/
+# data/
+# datasets/
+# checkpoints/
+# logs/
+# wandb/
 
-# Uploads
-uploads/
-temp/
-tmp/
+# # Uploads
+# uploads/
+# temp/
+# tmp/
 
-# Git
-.git/
-.gitignore
+# # Git
+# .git/
+# .gitignore
 
-# Docker
-Dockerfile
-.dockerignore
-docker-compose*.yml
+# # Docker
+# Dockerfile
+# .dockerignore
+# docker-compose*.yml
 
-# Tests
-tests/
-test_*.py
-*_test.py
+# # Tests
+# tests/
+# test_*.py
+# *_test.py
 
-# Documentation
-*.md
-docs/
+# # Documentation
+# *.md
+# docs/
