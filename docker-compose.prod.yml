@@ -12,7 +12,7 @@ services:
       PINECONE_API_KEY: ${PINECONE_API_KEY}
       PYTHONPATH: /app/Backend/src
     volumes:
-      # Persistent uploads directory
+      # Persistent uploads directoy
       - uploads_data:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
