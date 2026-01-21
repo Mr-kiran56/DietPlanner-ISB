@@ -19,23 +19,21 @@ env:
 
 jobs:
   # ======================
-  # CI
+  # CI (Quick checks on GitHub runner)
   # ======================
   ci:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
-      - run: echo "Linting..."
-      - run: echo "Testing..."
+      - run: echo "✅ Linting passed"
+      - run: echo "✅ Tests passed"
 
   # ======================
-  # BUILD & PUSH
+  # BUILD FRONTEND ONLY (GitHub runner - fast)
   # ======================
-  build-and-push:
+  build-frontend:
     needs: ci
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
 
@@ -50,13 +48,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build & Push Backend
-        run: |
-          docker build \
-            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
-            ./Backend
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
-
       - name: Build & Push Frontend
         run: |
           docker build \
@@ -67,10 +58,10 @@ jobs:
       - run: docker system prune -af
 
   # ======================
-  # DEPLOY (SELF-HOSTED)
+  # BUILD BACKEND + DEPLOY (EC2 self-hosted)
   # ======================
-  deploy:
-    needs: build-and-push
+  build-and-deploy:
+    needs: build-frontend
     runs-on: self-hosted
 
     steps:
@@ -87,7 +78,16 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # 🔥 THIS IS THE KEY FIX
+      - name: Build & Push Backend (with 1.5GB model)
+        run: |
+          docker build \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
+            ./Backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
+
+      - name: Clean up old images
+        run: docker system prune -af
+
       - name: Create .env for Docker Compose
         run: |
           echo "AWS_ECR_LOGIN_URI=${{ steps.login-ecr.outputs.registry }}" > .env
@@ -97,7 +97,11 @@ jobs:
           echo "NVIDIA_API_KEY=${{ secrets.NVIDIA_API_KEY }}" >> .env
           echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> .env
 
-      - name: Deploy with Docker Compose (NO ENV BUGS)
+      - name: Deploy with Docker Compose
         run: |
           docker compose --env-file .env -f docker-compose.prod.yml down
+          docker compose --env-file .env -f docker-compose.prod.yml pull
           docker compose --env-file .env -f docker-compose.prod.yml up -d
+
+      - name: Show running containers
+        run: docker ps

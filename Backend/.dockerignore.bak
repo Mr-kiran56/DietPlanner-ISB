@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Large model files
+*.safetensors
+*.pt
+optimizer.pt
+*.pth
+*.bin
+*.h5
+
+# Data files
+*.csv
+*.pkl
+
+# Model checkpoints
+checkpoint-*/
+IntentLLM-F/
+
+# Logs
+*.log
