@@ -22,7 +22,7 @@ jobs:
   # CI
   # ======================
   ci:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
       - run: echo "✅ Linting passed"
@@ -33,7 +33,7 @@ jobs:
   # ======================
   build-backend:
     needs: ci
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v3
