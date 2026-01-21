@@ -11,12 +11,13 @@ import shutil
 from typing import Optional, List, Dict, Any
 import os
 import aiofiles
+import datetime
 
 # ---------- PROJECT ROOT ----------
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+# FIXED: Use absolute path in Docker container
+PROJECT_ROOT = Path("/app")  # Changed from relative to absolute
 
 # ---------- UPLOAD DIRECTORY ----------
-# Use absolute path in container
 UPLOAD_DIR = Path("/app/uploads")
 UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
 
@@ -26,9 +27,8 @@ logger = logging.getLogger(__name__)
 
 # ---------- ADD BACKEND TO PATH ----------
 import sys
-BACKEND_SRC = PROJECT_ROOT / "Backend" / "src"
-if str(BACKEND_SRC) not in sys.path:
-    sys.path.insert(0, str(BACKEND_SRC))
+# FIXED: Correct path for Docker container
+sys.path.insert(0, "/app/Backend/src")
 
 # ---------- LOCAL IMPORTS ----------
 try:
@@ -37,10 +37,19 @@ try:
     from DataPreparation.dataPreprocess import Preprocess_data
     from IntentLLM.BertModel import split_sentences, predict_intent
     from DietPlanRAG.LLM import generate_diet
+    logger.info("✅ All imports successful!")
 except ImportError as e:
-    logger.error(f"Import error: {e}")
-    logger.error(f"Make sure Backend/src is in PYTHONPATH")
+    logger.error(f"❌ Import error: {e}")
     logger.error(f"Current sys.path: {sys.path}")
+    logger.error("Checking directory structure...")
+    try:
+        logger.error(f"Does /app exist? {Path('/app').exists()}")
+        logger.error(f"Does /app/Backend exist? {Path('/app/Backend').exists()}")
+        logger.error(f"Does /app/Backend/src exist? {Path('/app/Backend/src').exists()}")
+        logger.error(f"Contents of /app: {list(Path('/app').iterdir())}")
+        logger.error(f"Contents of /app/Backend: {list(Path('/app/Backend').iterdir())}")
+    except:
+        pass
     raise
 
 from dotenv import load_dotenv
@@ -56,7 +65,7 @@ app = FastAPI(
 # ---------- CORS MIDDLEWARE ----------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in production, or specify frontend URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -111,51 +120,66 @@ def load_model(model_path: Path):
     with open(model_path, "rb") as f:
         return pickle.load(f)
 
-MODEL_PATH = PROJECT_ROOT / "models/xgboost_medical_model.pkl"
+# FIXED: Use absolute path for model
+MODEL_PATH = Path("/app/Backend/models/xgboost_medical_model.pkl")
 try:
-    model = load_model(MODEL_PATH)
-    logger.info(f"Model loaded successfully from {MODEL_PATH}")
+    logger.info(f"Attempting to load model from: {MODEL_PATH}")
+    logger.info(f"Model path exists: {MODEL_PATH.exists()}")
+    if MODEL_PATH.exists():
+        model = load_model(MODEL_PATH)
+        logger.info(f"✅ Model loaded successfully from {MODEL_PATH}")
+    else:
+        logger.warning(f"⚠️ Model file not found at {MODEL_PATH}")
+        logger.warning(f"Looking for model in alternative locations...")
+        # Try alternative paths
+        alt_paths = [
+            Path("/app/models/xgboost_medical_model.pkl"),
+            Path("/app/Backend/src/models/xgboost_medical_model.pkl"),
+            Path("models/xgboost_medical_model.pkl")
+        ]
+        for alt_path in alt_paths:
+            if alt_path.exists():
+                MODEL_PATH = alt_path
+                model = load_model(MODEL_PATH)
+                logger.info(f"✅ Model loaded from alternative path: {MODEL_PATH}")
+                break
+        else:
+            logger.error("❌ Model not found in any location")
+            model = None
 except Exception as e:
-    logger.error(f"Failed to load model: {e}")
+    logger.error(f"❌ Failed to load model: {e}")
+    traceback.print_exc()
     model = None
 
 # ---------- FILE UPLOAD ENDPOINT ----------
 @app.post("/upload", response_model=UploadResponse)
 async def upload_file(file: UploadFile = File(...)):
-    """
-    Upload a medical report file (PDF, TXT, DOC, DOCX, or image).
-    Returns the relative file path for use in prediction endpoint.
-    """
+    """Upload a medical report file."""
     try:
-        # Validate file type
         allowed_extensions = ['.txt', '.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png']
         file_extension = Path(file.filename).suffix.lower()
         
         if file_extension not in allowed_extensions:
             raise HTTPException(
                 status_code=400,
-                detail=f"File type {file_extension} not supported. Allowed: {', '.join(allowed_extensions)}"
+                detail=f"File type {file_extension} not supported."
             )
         
-        # Create unique filename to avoid conflicts
         import uuid
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         safe_filename = f"{timestamp}_{unique_id}_{Path(file.filename).name}"
         file_path = UPLOAD_DIR / safe_filename
         
-        # Save file asynchronously
+        # Save file
         async with aiofiles.open(file_path, 'wb') as buffer:
             content = await file.read()
             await buffer.write(content)
         
         file_size = os.path.getsize(file_path)
-        
-        # Return relative path (for API calls)
         relative_path = f"uploads/{safe_filename}"
         
-        logger.info(f"File uploaded successfully: {relative_path} ({file_size} bytes)")
+        logger.info(f"✅ File uploaded: {relative_path} ({file_size} bytes)")
         
         return UploadResponse(
             message="File uploaded successfully",
@@ -182,55 +206,33 @@ async def ml_prediction_get(
     budget: str = "medium",
     days: int = 7
 ):
-    """
-    Generate diet plan based on uploaded medical report.
-    """
+    """Generate diet plan based on uploaded medical report."""
     try:
         # Validate parameters
         if food_type not in ["veg", "nonveg"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid food_type: {food_type}. Must be 'veg' or 'nonveg'"
-            )
+            raise HTTPException(400, "food_type must be 'veg' or 'nonveg'")
         
         if budget not in ["low", "medium", "high"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid budget: {budget}. Must be 'low', 'medium', or 'high'"
-            )
+            raise HTTPException(400, "budget must be 'low', 'medium', or 'high'")
         
         if not (1 <= days <= 30):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid days: {days}. Must be between 1 and 30"
-            )
+            raise HTTPException(400, "days must be between 1 and 30")
         
         # Resolve file path
         if file_path.startswith("uploads/"):
             full_path = UPLOAD_DIR / Path(file_path).name
         else:
-            full_path = Path(file_path)
+            full_path = UPLOAD_DIR / Path(file_path).name
+        
+        logger.info(f"Looking for file: {full_path}")
+        logger.info(f"File exists: {full_path.exists()}")
         
         if not full_path.exists():
-            # Try absolute path
-            full_path = UPLOAD_DIR / Path(file_path).name
-            if not full_path.exists():
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"File not found: {file_path}. Searched in: {UPLOAD_DIR}"
-                )
-        
-        logger.info("======== FILE DEBUG ========")
-        logger.info(f"Input file_path: {file_path}")
-        logger.info(f"Resolved path: {full_path}")
-        logger.info(f"Exists: {full_path.exists()}")
-        logger.info(f"File size: {full_path.stat().st_size if full_path.exists() else 'N/A'}")
-        logger.info("==========================")
+            raise HTTPException(404, f"File not found: {file_path}")
         
         # Data extraction
         logger.info("Starting data extraction...")
         dataDF, text = DataExtraction(str(full_path))
-        dataDF = dataDF.replace({None: np.nan}).infer_objects(copy=False)
         
         # Preprocess
         logger.info("Preprocessing data...")
@@ -240,7 +242,7 @@ async def ml_prediction_get(
         # ML prediction
         logger.info("Running ML prediction...")
         if model is None:
-            raise HTTPException(status_code=500, detail="ML model not loaded")
+            raise HTTPException(500, "ML model not loaded")
         
         first_row = final_data.iloc[0]
         X = first_row.tolist()
@@ -267,8 +269,6 @@ async def ml_prediction_get(
                     "confidence": round(conf, 4)
                 })
         
-        logger.info(f"Detected {len(detected_intents)} intents")
-        
         # User payload
         user_payload = {
             "patient_profile": dataDF.iloc[0].to_dict(),
@@ -292,7 +292,7 @@ async def ml_prediction_get(
             days=days
         )
         
-        logger.info("Diet plan generated successfully")
+        logger.info("✅ Diet plan generated successfully")
         
         return {
             "ml_prediction": {
@@ -304,26 +304,27 @@ async def ml_prediction_get(
         
     except HTTPException:
         raise
-    except FileNotFoundError as e:
-        logger.error(f"File not found: {str(e)}")
-        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(500, f"Internal server error: {str(e)}")
 
 # ---------- POST PREDICTION ----------
 @app.post("/ML/Predict")
 async def ml_prediction(request: PredictionRequest):
-    """
-    POST endpoint for diet plan generation.
-    """
+    """POST endpoint for diet plan generation."""
     return await ml_prediction_get(
         file_path=request.file_path,
         food_type=request.food_type,
         budget=request.budget,
         days=request.days
     )
+
+# ---------- SIMPLE HEALTH CHECK ----------
+@app.get("/health")
+async def health_check_simple():
+    """Simple health check for Docker."""
+    return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
 
 # ---------- HEALTH CHECK ----------
 @app.get("/")
@@ -334,15 +335,15 @@ async def health_check():
         "message": "Diet Planner ML API is running",
         "version": "1.0.0",
         "model_loaded": model is not None,
+        "model_path": str(MODEL_PATH),
+        "model_exists": MODEL_PATH.exists() if hasattr(MODEL_PATH, 'exists') else False,
         "upload_dir": str(UPLOAD_DIR),
-        "upload_dir_exists": UPLOAD_DIR.exists(),
-        "upload_dir_files": len(list(UPLOAD_DIR.glob("*"))) if UPLOAD_DIR.exists() else 0,
+        "python_path": sys.path,
         "endpoints": {
             "upload": "POST /upload",
-            "predict_get": "GET /ML/Predict?file_path=<path>&food_type=<veg|nonveg>&budget=<low|medium|high>&days=<1-30>",
-            "predict_post": "POST /ML/Predict",
-            "health": "GET /",
-            "labels": "GET /labels"
+            "predict": "GET /ML/Predict?file_path=<path>&food_type=<type>&budget=<range>&days=<num>",
+            "health": "GET /health",
+            "root": "GET /"
         }
     }
 
@@ -350,10 +351,7 @@ async def health_check():
 @app.get("/labels")
 async def get_labels():
     """Get list of possible disease predictions."""
-    return {
-        "labels": labels,
-        "count": len(labels)
-    }
+    return {"labels": labels, "count": len(labels)}
 
 # ---------- LIST UPLOADED FILES ----------
 @app.get("/uploads")
