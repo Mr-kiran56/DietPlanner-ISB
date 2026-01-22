@@ -9,15 +9,17 @@ services:
       NVIDIA_API_KEY: ${NVIDIA_API_KEY}
       PINECONE_API_KEY: ${PINECONE_API_KEY}
       PYTHONPATH: /app/Backend/src
+      PYTHONUNBUFFERED: "1"
     volumes:
       - uploads_data:/app/uploads
-    # Simple health check that works
+    # Health check is now in Dockerfile, so we can remove it here OR keep it for override
+    # Keeping it here overrides the Dockerfile one, so let's keep it:
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()"]
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 300s
+      retries: 20
+      start_period: 180s
 
   frontend:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_FRONTEND_REPO}:${IMAGE_TAG}
