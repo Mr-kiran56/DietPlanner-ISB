@@ -1,12 +1,6 @@
-import os
-import re
 import pandas as pd
-import fitz
-import cv2
 import numpy as np
-import pytesseract
-
-
+import re
 
 
 def calculate_body_fat(bmi, age, gender):
@@ -77,6 +71,8 @@ def simple_preprocess(df):
 
 
 def ocr_max_text(image_path):
+    import cv2
+    import pytesseract
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     if img is None:
@@ -102,6 +98,8 @@ def ocr_max_text(image_path):
 
 
 def pdfDataExtraction(file_path):
+    import fitz
+    
     pdf = fitz.open(file_path)
     text = ""
 
@@ -132,6 +130,8 @@ def pdfDataExtraction(file_path):
 
 
 def imageDataExtraction(file_path):
+    
+    
 
     text = ocr_max_text(file_path)
 
