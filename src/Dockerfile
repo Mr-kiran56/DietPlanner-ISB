@@ -11,7 +11,7 @@ RUN npm cache clean --force && \
     npm install && \
     npm install -g vite @vitejs/plugin-react
 
-# Copy all source files
+# Copy all source 
 COPY . .
 
 # Verify installation and build
