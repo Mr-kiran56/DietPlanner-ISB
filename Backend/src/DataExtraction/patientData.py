@@ -7,7 +7,7 @@ import numpy as np
 import pytesseract
 
 
-pytesseract.pytesseract.tesseract_cmd = r"B:/tesseract-64bit/tesseract.exe"
+
 
 def calculate_body_fat(bmi, age, gender):
     if bmi is None or age is None or gender is None:
@@ -220,4 +220,3 @@ def DataExtraction(file_path):
     return df,text
 
 
-print(pytesseract.get_tesseract_version())
