@@ -38,4 +38,4 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=20 --start-period=180s \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Start uvicorn directly - NO TEST SCRIPT!
-CMD ["python", "-m", "uvicorn", "Backend.src.DietPlanRAG.DietGuide:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
+CMD ["python", "-m", "uvicorn", "src.DietPlanRAG.DietGuide:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
