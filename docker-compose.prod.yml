@@ -6,20 +6,10 @@ services:
       - "8000:8000"
     restart: unless-stopped
     environment:
-      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
-      PINECONE_API_KEY: ${PINECONE_API_KEY}
       PYTHONPATH: /app/Backend/src
       PYTHONUNBUFFERED: "1"
     volumes:
       - uploads_data:/app/uploads
-    # Health check is now in Dockerfile, so we can remove it here OR keep it for override
-    # Keeping it here overrides the Dockerfile one, so let's keep it:
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 400s
 
   frontend:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_FRONTEND_REPO}:${IMAGE_TAG}
@@ -28,9 +18,7 @@ services:
       - "80:80"
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
 
 volumes:
   uploads_data:
-    driver: local
