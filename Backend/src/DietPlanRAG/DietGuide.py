@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 
 
+
 # ========== CONFIGURATION ==========
 class Config:
     """Application configuration."""
@@ -373,6 +374,14 @@ async def upload_file(file: UploadFile = File(...)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File upload failed: {str(e)}"
         )
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "service": "dietplanner-backend"
+    }
 
 
 @app.get("/ML/Predict", tags=["Prediction"])
