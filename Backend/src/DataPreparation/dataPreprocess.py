@@ -7,6 +7,8 @@ from numpy import dtype
 from sklearn.preprocessing import LabelEncoder,OrdinalEncoder
 from sklearn.model_selection import train_test_split
 from pathlib import Path
+
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DATA_PATH = PROJECT_ROOT / "data" / "raw_csv"/"raw_data.csv"
 
@@ -91,11 +93,6 @@ def assign_single_label(row):
 # from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 # import pandas as pd
 
-from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
-
-from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
-import numpy as np
-import pandas as pd
 
 def Preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()

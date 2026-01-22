@@ -17,7 +17,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      start_period: 300s
 
   frontend:
     image: ${AWS_ECR_LOGIN_URI}/${ECR_FRONTEND_REPO}:${IMAGE_TAG}
