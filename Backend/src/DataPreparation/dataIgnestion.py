@@ -69,7 +69,7 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
             df['Anemia'] = df['Anemia'].replace({
                 'Dietary iron': 'Mild',
                 'Iron therapy needed': 'Moderate'
-            })
+            }).astype(object)
 
         return df
 

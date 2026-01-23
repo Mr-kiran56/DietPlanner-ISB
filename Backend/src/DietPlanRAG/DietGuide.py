@@ -376,12 +376,12 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
 
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "ok",
-        "service": "dietplanner-backend"
-    }
+# @app.get("/health")
+# async def health_check():
+#     return {
+#         "status": "ok",
+#         "service": "dietplanner-backend"
+#     }
 
 
 @app.get("/ML/Predict", tags=["Prediction"])
