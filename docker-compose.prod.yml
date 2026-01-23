@@ -6,8 +6,11 @@ services:
       - "8000:8000"
     restart: unless-stopped
     environment:
+      INTENT_MODEL_PATH: /app/Backend/src/IntentLLM/IntentLLM-F/export_results/checkpoint-500
       PYTHONPATH: /app/Backend/src
       PYTHONUNBUFFERED: "1"
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY} 
+      PINECONE_API_KEY: ${PINECONE_API_KEY} 
     volumes:
       - uploads_data:/app/uploads
 

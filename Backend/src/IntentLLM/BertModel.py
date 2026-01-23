@@ -25,8 +25,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # PATHS
 # ============================================================
 BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = os.getenv(
+    "INTENT_MODEL_PATH",
+    "/app/Backend/src/IntentLLM/IntentLLM-F/export_results/checkpoint-500"
+)
 
-MODEL_PATH = BASE_DIR / "IntentLLM-F" / "export" / "results" / "checkpoint-500"
 LABEL_ENCODER_PATH = BASE_DIR / "label_encoder.pkl"
 
 # ============================================================
