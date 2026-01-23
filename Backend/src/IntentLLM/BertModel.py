@@ -122,7 +122,7 @@ def predict_intent(sentence: str):
         if not sentence or len(sentence.strip()) < 3:
             return "unknown", 0.0
 
-        # Load model only when needed
+        # Load model only when neededd
         load_intent_model()
 
         inputs = tokenizer(
