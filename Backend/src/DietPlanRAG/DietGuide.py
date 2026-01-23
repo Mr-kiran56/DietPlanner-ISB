@@ -445,6 +445,10 @@ async def _generate_diet_plan(request: PredictionRequest) -> Dict[str, Any]:
         logger.info("Preprocessing data...")
         dataDF = preprocess_data(dataDF)
         final_data = Preprocess_data(dataDF)
+        import pandas as pd
+        final_data = final_data.apply(pd.to_numeric, errors="coerce")
+        final_data = final_data.fillna(0.0)
+
         
         # Prepare input for ML model
         first_row = final_data.iloc[0].tolist()
