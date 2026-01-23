@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package file
+# Copy package fil
 COPY package*.json ./
 
 # Install dependencies and vite globally
