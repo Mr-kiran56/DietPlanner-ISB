@@ -442,7 +442,7 @@ async def _generate_diet_plan(request: PredictionRequest) -> Dict[str, Any]:
         dataDF, text = DataExtraction(str(full_path))
         
         # Preprocess data
-        logger.info("Preprocessing data...")
+        logger.info("Preprocessing data..")
         dataDF = preprocess_data(dataDF)
         final_data = Preprocess_data(dataDF)
         import pandas as pd
