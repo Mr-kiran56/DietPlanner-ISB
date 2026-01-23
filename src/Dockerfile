@@ -19,7 +19,7 @@ RUN which vite && \
     ls -la node_modules/.bin/ && \
     npm run build
 
-# Production stage
+# Production stag
 FROM nginx:alpine
 
 # Copy built assets from builder stage
