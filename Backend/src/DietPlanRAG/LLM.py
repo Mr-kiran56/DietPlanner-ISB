@@ -4,26 +4,49 @@ from .promptTemplate import unified_medical_prompt
 from .vectorRetriever import get_retriever
 
 
-def generate_diet(
-    context: str,           
-    payload: dict,          
-    days: int             
-):
+def build_retriever_query(payload: dict) -> str:
+    disease = payload.get("ml_prediction", {}).get("predicted_disease", "")
+    confidence = payload.get("ml_prediction", {}).get("confidence", "")
+    intents = payload.get("detected_intents", [])
+    prefs = payload.get("user_preferences", {})
+    profile = payload.get("patient_profile", {})
+
+    key_metrics = []
+    for k, v in profile.items():
+        if isinstance(v, (int, float)):
+            key_metrics.append(k)
+
+    return f"""
+    Evidence-based medical nutrition guidelines for {disease} and confidence of disease {confidence}.
+    Dietary recommendations addressing patient metrics: {', '.join(key_metrics)}.
+    Relevant to intents: {', '.join(intents)}.
+    Food type preference: {prefs.get('food_type', 'any')}.
+    Budget considerations: {prefs.get('budget', 'standard')}.
     """
-    Generate diet plan from context and payload.
-    """
-    # Remove the retriever logic since you're passing context directly
-    
+
+
+
+def generate_diet(payload: dict):
+    days = payload["user_preferences"]["days"]
+
     llm = ChatNVIDIA(
         model="meta/llama-3.1-8b-instruct",
-        temperature=0.1,
+        temperature=0.05,
         max_tokens=7000
     )
 
-    prompt = unified_medical_prompt()
+    retriever = get_retriever()
+
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+
+    retrieval_query = build_retriever_query(payload)
+
+    docs = retriever.invoke(retrieval_query)
+    context = format_docs(docs)
 
     chain = (
-        prompt
+        unified_medical_prompt()
         | llm
         | StrOutputParser()
     )
@@ -33,5 +56,3 @@ def generate_diet(
         "payload": payload,
         "days": days
     })
-
-
