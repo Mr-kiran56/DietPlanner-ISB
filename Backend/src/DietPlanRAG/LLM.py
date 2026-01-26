@@ -36,6 +36,7 @@ def generate_diet(payload: dict):
         model="meta/llama-3.1-8b-instruct",
         temperature=0.05,
         max_tokens=7000
+        max_completion_tokens=4096
     )
 
     retriever = get_retriever()

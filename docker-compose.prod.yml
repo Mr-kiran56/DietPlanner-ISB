@@ -1,5 +1,6 @@
 services:
   backend:
+    # Service name is 'backend', so Nginx can call http://backend:8000
     image: ${AWS_ECR_LOGIN_URI}/${ECR_BACKEND_REPO}:${IMAGE_TAG}
     container_name: dietplanner-backend
     ports:

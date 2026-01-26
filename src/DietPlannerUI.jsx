@@ -16,17 +16,25 @@ const DietPlanner = () => {
   const [error, setError] = useState(null);
   const [selectedDay, setSelectedDay] = useState('day_1');
 
-  // FIXED: Get API base URL correctly
+  // ==========================================
+  // 1. CRITICAL FIX FOR PHONES/DOCKER
+  // ==========================================
   const getApiBaseUrl = () => {
-    // In production (docker), use relative path with /api prefix
-    // In development, use localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://127.0.0.1:8000';
+    const hostname = window.location.hostname;
+    
+    // If we are developing locally on the laptop
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8000';
     }
-    return '/api'; // Nginx will proxy to backend
+
+    // If we are on a Phone, or another Laptop (Production/Docker)
+    // We return '/api' so Nginx handles the routing.
+    return '/api'; 
   };
 
   const API_BASE_URL = getApiBaseUrl();
+  // ==========================================
+
 
   // Parse the nested JSON structure from API response
   const parseDietPlan = (apiResponse) => {
@@ -60,6 +68,7 @@ const DietPlanner = () => {
       const formData = new FormData();
       formData.append('file', uploadedFile);
 
+      // Using the dynamic API_BASE_URL
       console.log('Uploading to:', `${API_BASE_URL}/upload`);
       
       const uploadResponse = await fetch(`${API_BASE_URL}/upload`, {
@@ -184,20 +193,6 @@ const DietPlanner = () => {
     );
   };
 
-  // Add debug info in development
-  const renderDebugInfo = () => {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return (
-        <div className="debug-info">
-          <p>API Base URL: {API_BASE_URL}</p>
-          <p>Uploaded File Path: {uploadedFilePath || 'None'}</p>
-          <p>Step: {step}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="app-container">
       <header className="header">
@@ -221,18 +216,13 @@ const DietPlanner = () => {
 
       <main className="main-content">
         <div className="container">
-          {/* Debug info for development */}
-          {renderDebugInfo()}
-          
           {error && (
             <div className="error-box">
               <div className="error-icon">⚠️</div>
               <div>
                 <p className="error-title">Error</p>
                 <p className="error-message">{error}</p>
-                {API_BASE_URL && (
-                  <p className="error-detail">API: {API_BASE_URL}</p>
-                )}
+                <p className="error-detail">Attempting to connect to: {API_BASE_URL}</p>
               </div>
             </div>
           )}

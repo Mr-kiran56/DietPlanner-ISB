@@ -23,10 +23,10 @@ if not NVIDIA_API_KEY:
 
 # ================= CONFIG =================
 INDEX_NAME = "diet-plan"
-DIMENSION = 1024
+DIMENSION = 4096 
 METRIC = "cosine"
 
-BATCH_SIZE = 30
+BATCH_SIZE = 100
 MAX_RETRIES = 3
 RETRY_SLEEP = 5  # seconds
 
@@ -86,7 +86,11 @@ def ingest_in_batches(docs, vectorstore):
 
 
 def ingest_documents(document_chunks, filename: str):
-    embeddings = NVIDIAEmbeddings(api_key=NVIDIA_API_KEY)
+    embeddings = NVIDIAEmbeddings(
+        model="nvidia/nv-embed-v1", 
+        api_key=NVIDIA_API_KEY
+    )
+
 
     namespace = filename.replace("/", "_").replace(".", "_").lower()
 
