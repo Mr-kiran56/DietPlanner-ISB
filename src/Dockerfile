@@ -6,7 +6,7 @@ WORKDIR /app
 # Copy package fil
 COPY package*.json ./
 
-# Install dependencies and vite globally
+# Install dependencies and vit
 RUN npm cache clean --force && \
     npm install && \
     npm install -g vite @vitejs/plugin-react
