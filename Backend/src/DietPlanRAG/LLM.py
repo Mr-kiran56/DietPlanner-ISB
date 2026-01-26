@@ -8,6 +8,7 @@ def build_retriever_query(payload: dict) -> str:
     disease = payload.get("ml_prediction", {}).get("predicted_disease", "")
     confidence = payload.get("ml_prediction", {}).get("confidence", "")
     intents = payload.get("detected_intents", [])
+    intent_names = [i["intent"] for i in intents if isinstance(i, dict)]
     prefs = payload.get("user_preferences", {})
     profile = payload.get("patient_profile", {})
 
@@ -19,10 +20,12 @@ def build_retriever_query(payload: dict) -> str:
     return f"""
     Evidence-based medical nutrition guidelines for {disease} and confidence of disease {confidence}.
     Dietary recommendations addressing patient metrics: {', '.join(key_metrics)}.
-    Relevant to intents: {', '.join(intents)}.
+    Relevant to intents: {', '.join(intent_names)}.
+
     Food type preference: {prefs.get('food_type', 'any')}.
     Budget considerations: {prefs.get('budget', 'standard')}.
     """
+
 
 
 

@@ -466,7 +466,8 @@ async def _generate_diet_plan(request: PredictionRequest) -> Dict[str, Any]:
         
         for sentence in sentences:
             intent, conf = predict_intent(sentence)
-            if conf >= 0.7:
+            
+            if intent != "unknown" and conf >= 0.7:
                 detected_intents.append({
                     "sentence": sentence,
                     "intent": intent,
@@ -490,11 +491,7 @@ async def _generate_diet_plan(request: PredictionRequest) -> Dict[str, Any]:
         
         # Generate diet plan using LLM
         logger.info(f"Generating {request.days}-day diet plan...")
-        diet_response = generate_diet(
-            context=text,
-            payload=user_payload,
-            days=request.days
-        )
+        diet_response = generate_diet(user_payload)
         
         logger.info("Diet plan generated successfully")
         
