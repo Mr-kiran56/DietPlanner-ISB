@@ -19,24 +19,9 @@ services:
     container_name: dietplanner-frontend
     ports:
       - "80:80"
-      - "443:443"  # ✅ ADDED: Open secure port
     restart: unless-stopped
     depends_on:
       - backend
-    volumes:
-      # ✅ ADDED: Share certificates with Nginx
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-
-  # ✅ ADDED: New service to handle SSL Certificates
-  certbot:
-    image: certbot/certbot
-    container_name: dietplanner-certbot
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    # This command checks for renewal every 12 hours
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
   uploads_data:
