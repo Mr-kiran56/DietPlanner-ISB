@@ -51,7 +51,7 @@ def file_process(file_path: str):
 
     # ------------------------------------------------
     # STEP 2: FINAL CHUNKS (EMBEDDING SAFE)
-    # ------------------------------------------------
+    # ---------------------------------------
     small_splitter = TokenTextSplitter(
         chunk_size=450,      
         chunk_overlap=50     
