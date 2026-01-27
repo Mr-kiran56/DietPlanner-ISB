@@ -17,6 +17,9 @@ env:
   FRONTEND_REPO: ${{ secrets.ECR_FRONTEND_REPO }}
   IMAGE_TAG: latest
 
+# ======================================================
+# CI JOB (SAFE TO USE CHECKOUT)
+# ======================================================
 jobs:
   ci:
     runs-on: self-hosted
@@ -25,10 +28,14 @@ jobs:
       - run: echo "✅ Linting passed"
       - run: echo "✅ Tests passed"
 
+# ======================================================
+# BUILD BACKEND (SAFE TO USE CHECKOUT)
+# ======================================================
   build-backend:
     needs: ci
     runs-on: self-hosted
     timeout-minutes: 20
+
     steps:
       - uses: actions/checkout@v3
 
@@ -50,18 +57,21 @@ jobs:
 
       - name: Build & Push Backend
         run: |
-          docker build \
-            --no-cache \
+          docker build --no-cache \
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }} \
-            -f Backend/Dockerfile \
-            .
+            -f Backend/Dockerfile .
 
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
 
+# ======================================================
+# BUILD FRONTEND (SAFE TO USE CHECKOUT)
+# ======================================================
   build-frontend:
     needs: ci
     runs-on: self-hosted
     timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v3
 
@@ -78,26 +88,41 @@ jobs:
 
       - name: Build & Push Frontend
         run: |
-          docker build \
-            --no-cache \
+          docker build --no-cache \
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }} \
-            -f src/Dockerfile \
-            .
+            -f src/Dockerfile .
 
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
 
       - name: Cleanup
         if: always()
         run: docker system prune -af
 
+# ======================================================
+# DEPLOY JOB (❌ NO CHECKOUT — THIS IS THE FIX)
+# ======================================================
   deploy:
     needs: [build-backend, build-frontend]
     runs-on: self-hosted
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v3
+      # ----------------------------------------------
+      # PREPARE SAFE DEPLOY DIRECTORY (NOT _work)
+      # ----------------------------------------------
+      - name: Prepare deployment directory
+        run: |
+          sudo mkdir -p /opt/dietplanner
+          sudo chown -R ubuntu:ubuntu /opt/dietplanner
+          rsync -av --delete \
+            --exclude .git \
+            /home/ubuntu/actions-runner/_work/DietPlanner-ISB/DietPlanner-ISB/ \
+            /opt/dietplanner/
 
+      # ----------------------------------------------
+      # AWS SETUP
+      # ----------------------------------------------
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -109,9 +134,12 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      # ----------------------------------------------
+      # CREATE ENV FILE
+      # ----------------------------------------------
       - name: Create .env file
         run: |
-          cat > .env << EOF
+          cat > /opt/dietplanner/.env << EOF
           AWS_ECR_LOGIN_URI=${{ steps.login-ecr.outputs.registry }}
           ECR_BACKEND_REPO=${{ env.BACKEND_REPO }}
           ECR_FRONTEND_REPO=${{ env.FRONTEND_REPO }}
@@ -120,18 +148,27 @@ jobs:
           PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
           EOF
 
+      # ----------------------------------------------
+      # DEPLOY FROM /opt (SAFE)
+      # ----------------------------------------------
       - name: Pull latest images
         run: |
+          cd /opt/dietplanner
           docker compose --env-file .env -f docker-compose.prod.yml pull
 
-      - name: Deploy (NO HEALTH CHECKS)
+      - name: Deploy containers
         run: |
+          cd /opt/dietplanner
           docker compose --env-file .env -f docker-compose.prod.yml down --remove-orphans
           docker compose --env-file .env -f docker-compose.prod.yml up -d
           sleep 10
 
+      # ----------------------------------------------
+      # VERIFY
+      # ----------------------------------------------
       - name: Verify containers
         run: |
           docker ps
-          docker compose --env-file .env -f docker-compose.prod.yml logs backend --tail=20
-          docker compose --env-file .env -f docker-compose.prod.yml logs frontend --tail=20
+          cd /opt/dietplanner
+          docker compose logs backend --tail=20
+          docker compose logs frontend --tail=20
