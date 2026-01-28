@@ -489,7 +489,7 @@ async def _generate_diet_plan(request: PredictionRequest) -> Dict[str, Any]:
             }
         }
         
-        # Generate diet plan using LLMs
+       
         logger.info(f"Generating {request.days}-day diet plan...")
         diet_response = generate_diet(user_payload)
         
